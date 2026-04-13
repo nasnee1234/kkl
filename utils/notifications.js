@@ -40,7 +40,7 @@ export async function registerForPushNotifications() {
 
   try {
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: 'kkl1-66a9e',
+      projectId: '17cc010d-3bcc-430d-b6cc-526054474624',
     });
     return tokenData.data;
   } catch {
