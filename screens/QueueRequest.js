@@ -1,49 +1,145 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, ScrollView,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  collection, addDoc, getDocs, serverTimestamp, query, orderBy, limit,
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { useNavigation } from '@react-navigation/native';
+import { serverTimestamp } from 'firebase/firestore';
 import { useQueue } from '../contexts/QueueContext';
+import { createQueueWithNumber } from '../utils/queueNumbers';
 import { registerForPushNotifications } from '../utils/notifications';
 
-const STATUS_ICON = {
-  waiting:   { icon: 'time-outline',             color: '#f59e0b', bg: '#fef3c7' },
-  calling:   { icon: 'megaphone-outline',         color: '#1d4ed8', bg: '#dbeafe' },
-  done:      { icon: 'checkmark-circle-outline',  color: '#6b7280', bg: '#f3f4f6' },
-  cancelled: { icon: 'close-circle-outline',      color: '#ef4444', bg: '#fee2e2' },
+const STATUS_COPY = {
+  waiting: {
+    title: 'จองคิวสำเร็จ!',
+    note: 'เมื่อถึงคิวเราจะเรียกคุณ',
+    icon: 'checkmark',
+    iconBg: '#45ae4e',
+  },
+  calling: {
+    title: 'ถึงคิวของคุณแล้ว!',
+    note: 'กรุณามาที่เคาน์เตอร์ทันที',
+    icon: 'megaphone-outline',
+    iconBg: '#df4d41',
+  },
+  done: {
+    title: 'เสร็จสิ้นแล้ว',
+    note: 'ขอบคุณที่ใช้บริการ',
+    icon: 'checkmark-done-outline',
+    iconBg: '#45ae4e',
+  },
+  cancelled: {
+    title: 'คิวถูกยกเลิก',
+    note: 'คุณสามารถรับคิวใหม่ได้',
+    icon: 'close-outline',
+    iconBg: '#df4d41',
+  },
 };
 
+function QueueHero({ scrollY }) {
+  const navigation = useNavigation();
+  const heroHeight = scrollY.interpolate({
+    inputRange: [0, 170],
+    outputRange: [276, 96],
+    extrapolate: 'clamp',
+  });
+  const chickenSize = scrollY.interpolate({
+    inputRange: [0, 170],
+    outputRange: [88, 34],
+    extrapolate: 'clamp',
+  });
+  const chickenLineHeight = scrollY.interpolate({
+    inputRange: [0, 170],
+    outputRange: [96, 40],
+    extrapolate: 'clamp',
+  });
+  const titleSize = scrollY.interpolate({
+    inputRange: [0, 170],
+    outputRange: [22, 18],
+    extrapolate: 'clamp',
+  });
+  const subtitleOpacity = scrollY.interpolate({
+    inputRange: [0, 90, 150],
+    outputRange: [1, 0.25, 0],
+    extrapolate: 'clamp',
+  });
+  const heroContentShift = scrollY.interpolate({
+    inputRange: [0, 170],
+    outputRange: [0, -6],
+    extrapolate: 'clamp',
+  });
+
+  const goBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('รายการ');
+  };
+
+  return (
+    <Animated.View style={[styles.hero, { height: heroHeight }]}>
+      <TouchableOpacity style={styles.backBtn} onPress={goBack}>
+        <Ionicons name="arrow-back" size={30} color="#fff" />
+      </TouchableOpacity>
+      <Animated.Text style={[styles.sparkleOne, { opacity: subtitleOpacity }]}>◆</Animated.Text>
+      <Animated.Text style={[styles.sparkleTwo, { opacity: subtitleOpacity }]}>◆</Animated.Text>
+      <Animated.View style={{ alignItems: 'center', transform: [{ translateY: heroContentShift }] }}>
+        <Animated.Text
+          style={[
+            styles.heroChicken,
+            {
+              fontSize: chickenSize,
+              lineHeight: chickenLineHeight,
+            },
+          ]}
+        >
+          🍗
+        </Animated.Text>
+        <Animated.Text style={[styles.heroTitle, { fontSize: titleSize }]}>
+          ระบบจองคิว / สั่งอาหาร
+        </Animated.Text>
+        <Animated.Text style={[styles.heroSubtitle, { opacity: subtitleOpacity }]}>
+          ร้านไก่กอและ และร้านกะเมาะห์
+        </Animated.Text>
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
 export default function QueueRequest() {
-  const { myQueue, takeQueue, clearQueue, STATUS_LABEL } = useQueue();
+  const navigation = useNavigation();
+  const { myQueue, takeQueue, clearQueue } = useQueue();
+  const scrollY = useRef(new Animated.Value(0)).current;
   const [pressed, setPressed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [receiptVisible, setReceiptVisible] = useState(false);
-
-  const handleTakeQueue = () => setPressed(true);
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: false }
+  );
 
   const handleConfirm = async () => {
+    setPressed(true);
     setLoading(true);
     try {
-      // ดึง push token ของอุปกรณ์นี้
       const pushToken = await registerForPushNotifications();
-
-      const q = query(collection(db, 'queues'), orderBy('number', 'desc'), limit(1));
-      const snap = await getDocs(q);
-      const nextNumber = snap.empty ? 1 : snap.docs[0].data().number + 1;
-
-      const docRef = await addDoc(collection(db, 'queues'), {
-        number: nextNumber,
+      const queue = await createQueueWithNumber({
         customerName: 'ลูกค้า',
         status: 'waiting',
-        pushToken: pushToken || null, // เก็บ token ไว้ให้ admin ใช้ส่ง push
+        pushToken: pushToken || null,
         createdAt: serverTimestamp(),
       });
 
-      takeQueue(docRef.id, nextNumber);
+      takeQueue(queue.id, queue.number);
       setPressed(false);
     } catch (e) {
       Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถรับคิวได้ กรุณาลองใหม่');
@@ -52,85 +148,80 @@ export default function QueueRequest() {
     }
   };
 
-  // มีคิวอยู่แล้ว — แสดงสถานะ realtime
+  const goMenu = () => navigation.navigate('รายการ');
+
   if (myQueue) {
     const status = myQueue.status || 'waiting';
-    const cfg = STATUS_ICON[status] || STATUS_ICON.waiting;
-    const lbl = STATUS_LABEL[status];
-    const isCalling = status === 'calling';
+    const copy = STATUS_COPY[status] || STATUS_COPY.waiting;
     const isDone = status === 'done' || status === 'cancelled';
     const showReceipt = status === 'done' && myQueue.saleAmount != null && myQueue.saleAmount > 0;
-
     const doneTime = myQueue.doneAt?.toDate
       ? myQueue.doneAt.toDate().toLocaleString('th-TH', {
-          day: '2-digit', month: '2-digit', year: 'numeric',
-          hour: '2-digit', minute: '2-digit',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
         })
       : new Date().toLocaleString('th-TH', {
-          day: '2-digit', month: '2-digit', year: 'numeric',
-          hour: '2-digit', minute: '2-digit',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
         });
 
     return (
       <View style={styles.container}>
-        <View style={styles.statusBox}>
-          {/* หมายเลขคิว */}
-          <Text style={styles.queueLabel}>หมายเลขคิวของคุณ</Text>
-          <Text style={styles.queueNumber}>{myQueue.number}</Text>
+        <QueueHero scrollY={scrollY} />
+        <Animated.ScrollView
+          contentContainerStyle={styles.content}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          <View style={styles.card}>
+            <View style={[styles.checkIcon, { backgroundColor: copy.iconBg }]}>
+              <Ionicons name={copy.icon} size={42} color="#fff" />
+            </View>
+            <Text style={styles.successTitle}>{copy.title}</Text>
+            <Text style={styles.successSub}>คุณได้คิวหมายเลข</Text>
+            <View style={styles.numberCircleOuter}>
+              <View style={styles.numberCircleInner}>
+                <Text style={styles.numberText}>{myQueue.number}</Text>
+              </View>
+            </View>
 
-          {/* สถานะ */}
-          <View style={[styles.statusCard, { backgroundColor: lbl.bg }, isCalling && styles.statusCardPulse]}>
-            <Ionicons name={cfg.icon} size={28} color={cfg.color} />
-            <Text style={[styles.statusText, { color: cfg.color }]}>{lbl.text}</Text>
+            <TouchableOpacity style={styles.messageBtn} activeOpacity={0.9}>
+              <Text style={styles.messageText}>{copy.note}</Text>
+            </TouchableOpacity>
+
+            {showReceipt && (
+              <TouchableOpacity style={styles.receiptBtn} onPress={() => setReceiptVisible(true)}>
+                <Ionicons name="receipt-outline" size={20} color="#df4d41" />
+                <Text style={styles.receiptBtnText}>ดูใบเสร็จ</Text>
+              </TouchableOpacity>
+            )}
+
+            {isDone && (
+              <TouchableOpacity style={styles.newQueueBtn} onPress={clearQueue}>
+                <Text style={styles.newQueueText}>รับคิวใหม่</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.homeTextBtn} onPress={goMenu}>
+              <Text style={styles.homeText}>กลับไปรายการ</Text>
+            </TouchableOpacity>
           </View>
+        </Animated.ScrollView>
 
-          {/* ข้อความเสริม */}
-          {status === 'waiting' && (
-            <Text style={styles.note}>กรุณารอเรียกหมายเลขของคุณ</Text>
-          )}
-          {isCalling && (
-            <Text style={[styles.note, { color: '#1d4ed8', fontWeight: '700' }]}>
-              กรุณามาที่เคาน์เตอร์ทันที!
-            </Text>
-          )}
-          {isDone && (
-            <Text style={styles.note}>
-              {status === 'done' ? 'ขอบคุณที่ใช้บริการ' : 'คิวถูกยกเลิกแล้ว'}
-            </Text>
-          )}
-
-          {/* ปุ่มดูใบเสร็จ */}
-          {showReceipt && (
-            <TouchableOpacity style={styles.receiptBtn} onPress={() => setReceiptVisible(true)}>
-              <Ionicons name="receipt-outline" size={18} color="#059669" />
-              <Text style={styles.receiptBtnText}>ดูใบเสร็จ</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* ปุ่มรับคิวใหม่ (เฉพาะเมื่อเสร็จหรือยกเลิก) */}
-          {isDone && (
-            <TouchableOpacity style={styles.resetBtn} onPress={clearQueue}>
-              <Text style={styles.resetBtnText}>รับคิวใหม่</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Modal ใบเสร็จ */}
         <Modal visible={receiptVisible} transparent animationType="fade">
           <View style={styles.receiptOverlay}>
             <ScrollView contentContainerStyle={styles.receiptScroll}>
               <View style={styles.receiptBox}>
-                {/* Header */}
-                <View style={styles.receiptHeader}>
-                  <Ionicons name="storefront-outline" size={32} color="#b45309" />
-                  <Text style={styles.receiptShop}>ร้านของเรา</Text>
-                  <Text style={styles.receiptSub}>ใบเสร็จรับเงิน</Text>
-                </View>
-
-                {/* Divider */}
+                <Ionicons name="storefront-outline" size={34} color="#df4d41" />
+                <Text style={styles.receiptShop}>ร้านไก่กอและ</Text>
+                <Text style={styles.receiptSub}>ใบเสร็จรับเงิน</Text>
                 <View style={styles.divider} />
-
-                {/* Info */}
                 <View style={styles.receiptRow}>
                   <Text style={styles.receiptKey}>หมายเลขคิว</Text>
                   <Text style={styles.receiptVal}>#{myQueue.number}</Text>
@@ -139,24 +230,13 @@ export default function QueueRequest() {
                   <Text style={styles.receiptKey}>วันที่ / เวลา</Text>
                   <Text style={styles.receiptVal}>{doneTime}</Text>
                 </View>
-
-                {/* Divider */}
                 <View style={styles.divider} />
-
-                {/* Total */}
                 <View style={styles.receiptRow}>
                   <Text style={styles.receiptTotalKey}>ยอดรวม</Text>
                   <Text style={styles.receiptTotalVal}>
                     {Number(myQueue.saleAmount).toLocaleString('th-TH')} บาท
                   </Text>
                 </View>
-
-                {/* Divider dotted */}
-                <View style={styles.dividerDot} />
-
-                <Text style={styles.receiptThanks}>ขอบคุณที่ใช้บริการ</Text>
-
-                {/* Close */}
                 <TouchableOpacity style={styles.receiptClose} onPress={() => setReceiptVisible(false)}>
                   <Text style={styles.receiptCloseText}>ปิด</Text>
                 </TouchableOpacity>
@@ -168,118 +248,200 @@ export default function QueueRequest() {
     );
   }
 
-  // ยังไม่มีคิว — หน้ารับคิว
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>รับคิว</Text>
-        <Text style={styles.subtitle}>กดปุ่มด้านล่างเพื่อรับคิวของคุณ</Text>
-      </View>
-
-      <View style={styles.center}>
-        <TouchableOpacity
-          style={[styles.queueBtn, pressed && styles.queueBtnPressed]}
-          onPress={handleTakeQueue}
-          activeOpacity={0.85}
-          disabled={loading}
-        >
-          <Ionicons name="time-outline" size={48} color="#fff" />
-          <Text style={styles.queueBtnText}>รับคิว</Text>
-        </TouchableOpacity>
-
-        {pressed && (
+      <QueueHero scrollY={scrollY} />
+      <Animated.ScrollView
+        contentContainerStyle={styles.content}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        <View style={styles.card}>
+          <Text style={styles.promptTitle}>กดเพื่อจองคิว</Text>
+          <Text style={styles.promptSub}>คลิกตรงนี้</Text>
           <TouchableOpacity
-            style={[styles.confirmBtn, loading && { opacity: 0.6 }]}
+            style={[styles.queueCircleOuter, pressed && styles.queueCirclePressed]}
+            onPress={() => setPressed(true)}
+            activeOpacity={0.86}
+            disabled={loading}
+          >
+            <View style={styles.queueCircleInner}>
+              <Text style={styles.queueCircleText}>รับคิว</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.confirmBtn, loading && styles.disabled]}
             onPress={handleConfirm}
             disabled={loading}
           >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.confirmBtnText}>ยืนยันคิวของคุณ</Text>
-            }
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.confirmText}>ยืนยันคิวของคุณ</Text>
+            )}
           </TouchableOpacity>
-        )}
-      </View>
+
+          <TouchableOpacity style={styles.homeTextBtn} onPress={goMenu}>
+            <Text style={styles.homeText}>กลับไปรายการ</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8, alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#1f2937' },
-  subtitle: { fontSize: 14, color: '#6b7280', marginTop: 4 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 32 },
-  queueBtn: {
-    width: 176, height: 176, borderRadius: 88, backgroundColor: '#b45309',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#b45309', shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35, shadowRadius: 16, elevation: 8,
+  container: { flex: 1, backgroundColor: '#efefef' },
+  hero: {
+    height: 276,
+    backgroundColor: '#e55347',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 26,
   },
-  queueBtnPressed: { backgroundColor: '#92400e' },
-  queueBtnText: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginTop: 8 },
+  backBtn: { position: 'absolute', left: 18, top: 42, width: 44, height: 44, justifyContent: 'center' },
+  sparkleOne: { position: 'absolute', left: 96, top: 86, color: '#f7beb8', fontSize: 14 },
+  sparkleTwo: { position: 'absolute', right: 94, top: 136, color: '#f7beb8', fontSize: 14 },
+  heroChicken: {
+    fontSize: 88,
+    lineHeight: 96,
+    marginBottom: 10,
+    textShadowColor: 'rgba(108, 36, 26, 0.28)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 8,
+  },
+  heroTitle: { color: '#ffe66a', fontSize: 22, fontWeight: '900', textAlign: 'center' },
+  heroSubtitle: { color: '#ffe66a', fontSize: 21, fontWeight: '900', textAlign: 'center', marginTop: 2 },
+  content: { padding: 16, paddingTop: 14, paddingBottom: 104 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    minHeight: 410,
+    paddingHorizontal: 28,
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  promptTitle: { color: '#111', fontSize: 25, fontWeight: '700', marginTop: 4 },
+  promptSub: { color: '#8d8d8d', fontSize: 19, fontWeight: '600', marginTop: 3 },
+  queueCircleOuter: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: '#df4d41',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  queueCirclePressed: { backgroundColor: '#d9463c' },
+  queueCircleInner: {
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    backgroundColor: '#e9756c',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  queueCircleText: { color: '#fff', fontSize: 38, fontWeight: '500' },
   confirmBtn: {
-    backgroundColor: '#f59e0b', paddingVertical: 16, paddingHorizontal: 48,
-    borderRadius: 20, shadowColor: '#f59e0b', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    height: 58,
+    width: '100%',
+    borderRadius: 7,
+    marginTop: 12,
+    backgroundColor: '#df4d41',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  confirmBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
-
-  // หน้าสถานะ
-  statusBox: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  queueLabel: { fontSize: 16, color: '#6b7280' },
-  queueNumber: { fontSize: 88, fontWeight: 'bold', color: '#b45309', lineHeight: 104 },
-  statusCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 24, paddingVertical: 16, borderRadius: 20,
-    marginTop: 16,
+  confirmText: { color: '#fff', fontSize: 20, fontWeight: '700' },
+  disabled: { opacity: 0.7 },
+  checkIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  statusCardPulse: {
-    borderWidth: 2, borderColor: '#1d4ed8',
+  successTitle: { color: '#111', fontSize: 25, fontWeight: '800' },
+  successSub: { color: '#8d8d8d', fontSize: 19, fontWeight: '600', marginTop: 2 },
+  numberCircleOuter: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: '#df4d41',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
   },
-  statusText: { fontSize: 18, fontWeight: '700' },
-  note: { fontSize: 14, color: '#6b7280', marginTop: 12, textAlign: 'center' },
-  resetBtn: {
-    marginTop: 36, borderWidth: 2, borderColor: '#b45309',
-    paddingVertical: 12, paddingHorizontal: 40, borderRadius: 16,
+  numberCircleInner: {
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    backgroundColor: '#e9756c',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  resetBtnText: { color: '#b45309', fontSize: 15, fontWeight: '600' },
-
+  numberText: { color: '#fff', fontSize: 72, fontWeight: '300', lineHeight: 82 },
+  messageBtn: {
+    height: 58,
+    width: '100%',
+    borderRadius: 7,
+    marginTop: 12,
+    backgroundColor: '#df4d41',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  messageText: { color: '#fff', fontSize: 20, fontWeight: '700' },
   receiptBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 20, backgroundColor: '#d1fae5',
-    paddingVertical: 12, paddingHorizontal: 28, borderRadius: 16,
+    height: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
   },
-  receiptBtnText: { color: '#059669', fontSize: 15, fontWeight: '700' },
-
-  // Modal ใบเสร็จ
+  receiptBtnText: { color: '#df4d41', fontSize: 16, fontWeight: '700' },
+  newQueueBtn: {
+    borderWidth: 1,
+    borderColor: '#df4d41',
+    borderRadius: 7,
+    paddingHorizontal: 24,
+    paddingVertical: 11,
+    marginTop: 8,
+  },
+  newQueueText: { color: '#df4d41', fontSize: 15, fontWeight: '700' },
+  homeTextBtn: { marginTop: 18, padding: 6 },
+  homeText: { color: '#7d7d7d', fontSize: 17, fontWeight: '500' },
   receiptOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center', alignItems: 'center',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.48)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   receiptScroll: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   receiptBox: {
-    backgroundColor: '#fff', borderRadius: 20, width: '100%', maxWidth: 360,
-    padding: 28, shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2, shadowRadius: 16, elevation: 10,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    width: '100%',
+    maxWidth: 360,
+    padding: 28,
+    alignItems: 'center',
   },
-  receiptHeader: { alignItems: 'center', marginBottom: 16 },
-  receiptShop: { fontSize: 20, fontWeight: 'bold', color: '#b45309', marginTop: 8 },
-  receiptSub: { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  divider: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 14 },
-  dividerDot: {
-    borderBottomWidth: 1.5, borderColor: '#d1d5db',
-    borderStyle: 'dashed', marginVertical: 14,
-  },
-  receiptRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  receiptKey: { fontSize: 14, color: '#6b7280' },
-  receiptVal: { fontSize: 14, color: '#1f2937', fontWeight: '500' },
-  receiptTotalKey: { fontSize: 16, fontWeight: 'bold', color: '#1f2937' },
-  receiptTotalVal: { fontSize: 18, fontWeight: 'bold', color: '#059669' },
-  receiptThanks: { textAlign: 'center', fontSize: 14, color: '#9ca3af', marginBottom: 20 },
+  receiptShop: { fontSize: 21, fontWeight: '800', color: '#df4d41', marginTop: 8 },
+  receiptSub: { fontSize: 14, color: '#777', marginTop: 2 },
+  divider: { height: 1, backgroundColor: '#e5e5e5', alignSelf: 'stretch', marginVertical: 14 },
+  receiptRow: { flexDirection: 'row', justifyContent: 'space-between', alignSelf: 'stretch', marginBottom: 8 },
+  receiptKey: { fontSize: 14, color: '#777' },
+  receiptVal: { fontSize: 14, color: '#111', fontWeight: '600' },
+  receiptTotalKey: { fontSize: 16, fontWeight: '800', color: '#111' },
+  receiptTotalVal: { fontSize: 18, fontWeight: '800', color: '#df4d41' },
   receiptClose: {
-    backgroundColor: '#b45309', borderRadius: 14,
-    paddingVertical: 13, alignItems: 'center',
+    alignSelf: 'stretch',
+    backgroundColor: '#df4d41',
+    borderRadius: 7,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginTop: 12,
   },
-  receiptCloseText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  receiptCloseText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

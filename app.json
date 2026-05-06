@@ -35,7 +35,8 @@
           "color": "#b45309",
           "defaultChannel": "queue"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {

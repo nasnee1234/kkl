@@ -9,6 +9,7 @@ import {
   doc, serverTimestamp, query, orderBy,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { createQueueWithNumber } from '../../utils/queueNumbers';
 import { sendPushNotification } from '../../utils/notifications';
 
 const STATUS_CONFIG = {
@@ -61,8 +62,7 @@ export default function QueueManagement() {
     if (!newName.trim()) { Alert.alert('แจ้งเตือน', 'กรุณากรอกชื่อลูกค้า'); return; }
     setSaving(true);
     try {
-      await addDoc(collection(db, 'queues'), {
-        number: nextNumber,
+      await createQueueWithNumber({
         customerName: newName.trim(),
         status: 'waiting',
         createdAt: serverTimestamp(),
