@@ -4,6 +4,7 @@ import {
   Alert,
   Animated,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,10 @@ import { serverTimestamp } from 'firebase/firestore';
 import { useQueue } from '../contexts/QueueContext';
 import { createQueueWithNumber } from '../utils/queueNumbers';
 import { registerForPushNotifications } from '../utils/notifications';
+
+const HERO_MAX_HEIGHT = 276;
+const HERO_MIN_HEIGHT = 96;
+const HERO_COLLAPSE_DISTANCE = HERO_MAX_HEIGHT - HERO_MIN_HEIGHT;
 
 const STATUS_COPY = {
   waiting: {
@@ -46,34 +51,34 @@ const STATUS_COPY = {
 
 function QueueHero({ scrollY }) {
   const navigation = useNavigation();
-  const heroHeight = scrollY.interpolate({
-    inputRange: [0, 170],
-    outputRange: [276, 96],
+  const heroTranslateY = scrollY.interpolate({
+    inputRange: [0, HERO_COLLAPSE_DISTANCE],
+    outputRange: [0, -HERO_COLLAPSE_DISTANCE],
     extrapolate: 'clamp',
   });
-  const chickenSize = scrollY.interpolate({
-    inputRange: [0, 170],
-    outputRange: [88, 34],
+  const chickenScale = scrollY.interpolate({
+    inputRange: [0, HERO_COLLAPSE_DISTANCE],
+    outputRange: [1, 0.44],
     extrapolate: 'clamp',
   });
-  const chickenLineHeight = scrollY.interpolate({
-    inputRange: [0, 170],
-    outputRange: [96, 40],
-    extrapolate: 'clamp',
-  });
-  const titleSize = scrollY.interpolate({
-    inputRange: [0, 170],
-    outputRange: [22, 18],
+  const titleScale = scrollY.interpolate({
+    inputRange: [0, HERO_COLLAPSE_DISTANCE],
+    outputRange: [1, 0.84],
     extrapolate: 'clamp',
   });
   const subtitleOpacity = scrollY.interpolate({
-    inputRange: [0, 90, 150],
-    outputRange: [1, 0.25, 0],
+    inputRange: [0, 76, 128],
+    outputRange: [1, 1, 1],
+    extrapolate: 'clamp',
+  });
+  const detailOpacity = scrollY.interpolate({
+    inputRange: [0, 112, HERO_COLLAPSE_DISTANCE],
+    outputRange: [1, 0.2, 0],
     extrapolate: 'clamp',
   });
   const heroContentShift = scrollY.interpolate({
-    inputRange: [0, 170],
-    outputRange: [0, -6],
+    inputRange: [0, HERO_COLLAPSE_DISTANCE],
+    outputRange: [0, 94],
     extrapolate: 'clamp',
   });
 
@@ -86,25 +91,22 @@ function QueueHero({ scrollY }) {
   };
 
   return (
-    <Animated.View style={[styles.hero, { height: heroHeight }]}>
-      <TouchableOpacity style={styles.backBtn} onPress={goBack}>
+    <Animated.View style={[styles.hero, { transform: [{ translateY: heroTranslateY }] }]}>
+      <TouchableOpacity style={styles.backBtn} onPress={goBack} activeOpacity={0.75}>
         <Ionicons name="arrow-back" size={30} color="#fff" />
       </TouchableOpacity>
-      <Animated.Text style={[styles.sparkleOne, { opacity: subtitleOpacity }]}>◆</Animated.Text>
-      <Animated.Text style={[styles.sparkleTwo, { opacity: subtitleOpacity }]}>◆</Animated.Text>
+      <Animated.Text style={[styles.sparkleOne, { opacity: detailOpacity }]}>◆</Animated.Text>
+      <Animated.Text style={[styles.sparkleTwo, { opacity: detailOpacity }]}>◆</Animated.Text>
       <Animated.View style={{ alignItems: 'center', transform: [{ translateY: heroContentShift }] }}>
         <Animated.Text
           style={[
             styles.heroChicken,
-            {
-              fontSize: chickenSize,
-              lineHeight: chickenLineHeight,
-            },
+            { opacity: detailOpacity, transform: [{ scale: chickenScale }] },
           ]}
         >
           🍗
         </Animated.Text>
-        <Animated.Text style={[styles.heroTitle, { fontSize: titleSize }]}>
+        <Animated.Text style={[styles.heroTitle, { transform: [{ scale: titleScale }] }]}>
           ระบบจองคิว / สั่งอาหาร
         </Animated.Text>
         <Animated.Text style={[styles.heroSubtitle, { opacity: subtitleOpacity }]}>
@@ -124,7 +126,7 @@ export default function QueueRequest() {
   const [receiptVisible, setReceiptVisible] = useState(false);
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    { useNativeDriver: false }
+    { useNativeDriver: true }
   );
 
   const handleConfirm = async () => {
@@ -173,11 +175,13 @@ export default function QueueRequest() {
 
     return (
       <View style={styles.container}>
-        <QueueHero scrollY={scrollY} />
         <Animated.ScrollView
           contentContainerStyle={styles.content}
           onScroll={handleScroll}
           scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          decelerationRate="fast"
         >
           <View style={styles.card}>
             <View style={[styles.checkIcon, { backgroundColor: copy.iconBg }]}>
@@ -213,6 +217,7 @@ export default function QueueRequest() {
             </TouchableOpacity>
           </View>
         </Animated.ScrollView>
+        <QueueHero scrollY={scrollY} />
 
         <Modal visible={receiptVisible} transparent animationType="fade">
           <View style={styles.receiptOverlay}>
@@ -250,11 +255,13 @@ export default function QueueRequest() {
 
   return (
     <View style={styles.container}>
-      <QueueHero scrollY={scrollY} />
       <Animated.ScrollView
         contentContainerStyle={styles.content}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        decelerationRate="fast"
       >
         <View style={styles.card}>
           <Text style={styles.promptTitle}>กดเพื่อจองคิว</Text>
@@ -287,14 +294,21 @@ export default function QueueRequest() {
           </TouchableOpacity>
         </View>
       </Animated.ScrollView>
+      <QueueHero scrollY={scrollY} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#efefef' },
+  container: { flex: 1, backgroundColor: '#efefef', overflow: 'hidden' },
   hero: {
-    height: 276,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    elevation: 10,
+    height: HERO_MAX_HEIGHT,
     backgroundColor: '#e55347',
     alignItems: 'center',
     justifyContent: 'center',
@@ -307,13 +321,15 @@ const styles = StyleSheet.create({
     fontSize: 88,
     lineHeight: 96,
     marginBottom: 10,
-    textShadowColor: 'rgba(108, 36, 26, 0.28)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 8,
+    ...(Platform.OS === 'web' ? {} : {
+      textShadowColor: 'rgba(108, 36, 26, 0.28)',
+      textShadowOffset: { width: 0, height: 4 },
+      textShadowRadius: 8,
+    }),
   },
   heroTitle: { color: '#ffe66a', fontSize: 22, fontWeight: '900', textAlign: 'center' },
   heroSubtitle: { color: '#ffe66a', fontSize: 21, fontWeight: '900', textAlign: 'center', marginTop: 2 },
-  content: { padding: 16, paddingTop: 14, paddingBottom: 104 },
+  content: { padding: 16, paddingTop: HERO_MAX_HEIGHT + 14, paddingBottom: 104 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 8,

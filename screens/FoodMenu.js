@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -165,9 +166,11 @@ const styles = StyleSheet.create({
   heroChicken: {
     fontSize: 50,
     lineHeight: 58,
-    textShadowColor: 'rgba(95, 31, 24, 0.24)',
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 6,
+    ...(Platform.OS === 'web' ? {} : {
+      textShadowColor: 'rgba(95, 31, 24, 0.24)',
+      textShadowOffset: { width: 0, height: 3 },
+      textShadowRadius: 6,
+    }),
   },
   heroTitle: { color: '#fff', fontSize: 28, fontWeight: '900' },
   shopHeader: {

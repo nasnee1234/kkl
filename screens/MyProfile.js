@@ -31,7 +31,7 @@ export default function MyProfile() {
   };
 
   const menuItems = [
-    { icon: 'calendar-check-outline', label: 'รายการการจอง', color: '#3b82f6', bg: '#eff6ff' },
+    { icon: 'calendar-outline', label: 'รายการการจอง', color: '#3b82f6', bg: '#eff6ff' },
     { icon: 'pricetag-outline', label: 'โปรโมชั่น / คูปอง', color: '#f59e0b', bg: '#fffbeb' },
   ];
 

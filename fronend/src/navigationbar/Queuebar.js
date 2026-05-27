@@ -36,19 +36,20 @@ export default function QueueRequest() {
   };
 
   return (
-    <div className="px-5 pt-6 flex flex-col items-center min-h-[calc(100vh-5rem)]">
+    <div className="relative z-10 px-5 pt-6 pb-24 flex flex-col items-center min-h-[calc(100vh-5rem)] overflow-visible">
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8 w-full"
+        initial={{ y: -8 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 220, damping: 24 }}
+        className="relative z-10 text-center mb-8 w-full opacity-100 transform-gpu"
       >
-        <h1 className="text-2xl font-bold text-foreground">รับคิว</h1>
-        <p className="text-muted-foreground text-sm mt-1">
+        <h1 className="text-2xl font-bold text-foreground opacity-100">รับคิว</h1>
+        <p className="text-muted-foreground text-sm mt-1 opacity-100">
           กดปุ่มด้านล่างเพื่อรับคิวของคุณ
         </p>
       </motion.div>
 
-      <div className="flex-1 flex flex-col items-center justify-center w-full">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center w-full overflow-visible">
         {/* Big Queue Button */}
         <motion.button
           onClick={handleTakeQueue}
@@ -57,7 +58,7 @@ export default function QueueRequest() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 15 }}
-          className={`w-44 h-44 rounded-full flex flex-col items-center justify-center shadow-lg transition-all duration-300 ${
+          className={`relative z-10 w-44 h-44 rounded-full flex flex-col items-center justify-center shadow-lg transition-all duration-300 transform-gpu ${
             pressed
               ? "bg-primary/80 shadow-primary/20"
               : "bg-primary shadow-primary/30 hover:shadow-primary/40 hover:shadow-xl"
@@ -73,11 +74,11 @@ export default function QueueRequest() {
         <AnimatePresence>
           {pressed && (
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 30 }}
+              initial={{ y: 24 }}
+              animate={{ y: 0 }}
+              exit={{ y: 24 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="mt-10 w-full max-w-xs"
+              className="relative z-10 mt-10 w-full max-w-xs opacity-100 transform-gpu"
             >
               <Button
                 onClick={handleConfirm}

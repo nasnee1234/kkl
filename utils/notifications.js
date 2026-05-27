@@ -2,13 +2,15 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 // ตั้งค่าการแสดง notification เมื่อแอปเปิดอยู่
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 // สร้าง notification channel สำหรับ Android
 export async function setupNotificationChannel() {
@@ -24,6 +26,10 @@ export async function setupNotificationChannel() {
 
 // ขอ permission และดึง Expo Push Token
 export async function registerForPushNotifications() {
+  if (Platform.OS === 'web') {
+    return null;
+  }
+
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 

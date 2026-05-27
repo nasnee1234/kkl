@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { Alert, Vibration } from 'react-native';
+import { Alert, Platform, Vibration } from 'react-native';
 import { doc, onSnapshot } from 'firebase/firestore';
 import * as Speech from 'expo-speech';
 import * as Notifications from 'expo-notifications';
@@ -21,6 +21,10 @@ export function QueueProvider({ children }) {
 
   // ตั้งค่า channel และ handler ครั้งเดียวตอน mount
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      return undefined;
+    }
+
     setupNotificationChannel();
 
     // แสดง notification แม้แอปเปิดอยู่
