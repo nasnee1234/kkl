@@ -1,13 +1,48 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useQueue } from '../contexts/QueueContext';
 import { formatQueueLabel } from '../utils/queueNumbers';
+import { getMenuImageUrl } from '../utils/imageUrls';
+import { getLocalMenuImage } from '../assets/menuImages';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+
+const SHOP_MAPS_URL = 'https://maps.app.goo.gl/wEDXyVi2cpxwD5Kc6';
+
+function BestSellerImage({ item }) {
+  const localImage = getLocalMenuImage(item?.imageKey);
+  const remoteUri = getMenuImageUrl(item);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [localImage, remoteUri]);
+
+  if (localImage) {
+    return <Image source={localImage} style={styles.bestImage} resizeMode="cover" />;
+  }
+
+  if (remoteUri && !imageFailed) {
+    return (
+      <Image
+        source={{ uri: remoteUri }}
+        style={styles.bestImage}
+        resizeMode="cover"
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <View style={styles.bestImagePlaceholder}>
+      <Text style={styles.bestImageLabel}>รูปอาหาร</Text>
+    </View>
+  );
+}
 
 export default function Home() {
   const navigation = useNavigation();
@@ -48,7 +83,7 @@ export default function Home() {
             </View>
             <View style={styles.heroBadge}>
               <View style={styles.heroBadgeDot} />
-              <Text style={styles.heroBadgeText}>เปิดถึง 20:00</Text>
+              <Text style={styles.heroBadgeText}>เปิดถึง 17:00</Text>
             </View>
           </View>
 
@@ -93,9 +128,7 @@ export default function Home() {
           ) : (
             bestSellers.map((item) => (
               <View key={item.id} style={styles.bestCard}>
-                <View style={styles.bestImagePlaceholder}>
-                  <Text style={styles.bestImageLabel}>รูปอาหาร</Text>
-                </View>
+                <BestSellerImage item={item} />
                 <Text style={styles.bestName} numberOfLines={2}>{item.name}</Text>
                 <Text style={styles.bestPrice}>฿{item.price}</Text>
               </View>
@@ -104,7 +137,11 @@ export default function Home() {
         </ScrollView>
 
         {/* ข้อมูลร้าน */}
-        <View style={styles.shopInfoCard}>
+        <TouchableOpacity
+          style={styles.shopInfoCard}
+          activeOpacity={0.85}
+          onPress={() => Linking.openURL(SHOP_MAPS_URL)}
+        >
           <View style={styles.shopInfoImage}>
             <Text style={styles.shopInfoImageLabel}>แผนที่{'\n'}ร้าน</Text>
           </View>
@@ -114,7 +151,7 @@ export default function Home() {
             <View style={styles.shopInfoRow}>
               <View style={styles.shopInfoItem}>
                 <Ionicons name="time-outline" size={13} color={colors.primaryDeep} />
-                <Text style={styles.shopInfoTime}>15:00–20:00</Text>
+                <Text style={styles.shopInfoTime}>9:00–17:00</Text>
               </View>
               <View style={styles.shopInfoItem}>
                 <Ionicons name="location-outline" size={13} color={colors.primaryDeep} />
@@ -122,7 +159,7 @@ export default function Home() {
               </View>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -196,6 +233,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
   },
+  bestImage: { width: '100%', height: 104, borderRadius: 14, backgroundColor: colors.creamSoft },
   bestImagePlaceholder: {
     height: 104,
     borderRadius: 14,

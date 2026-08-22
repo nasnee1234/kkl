@@ -10,7 +10,13 @@
 // require() ของ Metro ต้องเป็น path ตรงๆ แบบนี้เท่านั้น ใส่เป็นตัวแปรไม่ได้ จึงต้องเพิ่มทีละบรรทัด
 
 export const MENU_IMAGE_MAP = {
-  // ยังไม่มีรูปจริง — รอผู้ใช้ส่งไฟล์มาเพิ่มทีหลัง
+  kai_kolae_1: require('./images/menu/kai_kolae_1.jpg'),
+  kai_kolae_2: require('./images/menu/kai_kolae_2.jpg'),
+  kai_kolae_3: require('./images/menu/kai_kolae_3.jpg'),
+  kai_kolae_4: require('./images/menu/kai_kolae_4.jpg'),
+  kai_kolae_5: require('./images/menu/kai_kolae_5.jpg'),
+  kai_kolae_6: require('./images/menu/kai_kolae_6.jpg'),
+  kai_kolae_7: require('./images/menu/kai_kolae_7.jpg'),
 };
 
 export const MENU_IMAGE_KEYS = Object.keys(MENU_IMAGE_MAP);
