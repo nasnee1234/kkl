@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // IMPORTANT: ไฟล์นี้เป็นแค่ source-of-truth ใน git ไม่ได้ deploy อัตโนมัติ
+    // ต้อง publish เองผ่าน Firebase Console หรือรัน:
+    // firebase deploy --only firestore:rules
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'nasnee1997@gmail.com';
+    }
+
+    // เมนูอาหาร: ลูกค้าดูได้โดยไม่ต้องล็อกอิน, แก้ไขได้เฉพาะแอดมิน
+    match /menus/{menuId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // คิว: ลูกค้าไม่ล็อกอินก็สร้าง/อ่านคิวของตัวเองได้ (ดูสถานะแบบเรียลไทม์)
+    // แต่เปลี่ยนสถานะ/ลบคิวได้เฉพาะแอดมินเท่านั้น
+    match /queues/{queueId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // ตัวนับหมายเลขคิว: ความเสี่ยงต่ำ เปิดให้อ่าน/เขียนได้เพื่อออกเลขคิว
+    match /counters/{counterId} {
+      allow read, write: if true;
+    }
+
+    // ยอดขาย: ข้อมูลอ่อนไหว เฉพาะแอดมินเท่านั้น
+    match /sales/{saleId} {
+      allow read, write: if isAdmin();
+    }
+
+    // สถานะร้าน (เช่นตอนนี้เรียกถึงคิวไหนแล้ว) — ลูกค้าอ่านได้เพื่อคำนวณ "อีกกี่คิวถึงตัวเอง"
+    // เขียนได้เฉพาะแอดมินตอนเรียกคิว
+    match /meta/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -1,4 +1,6 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# หมายเหตุ: pattern พวกนี้ไม่มี "/" นำหน้า จึงครอบคลุมทั้ง mobile/ และ backend/ โดยอัตโนมัติ
+# (backend/ ยังมี .gitignore ของตัวเองแยกไว้อีกชั้นสำหรับ .env และ dist/ ที่ compile จาก TypeScript)
 
 # dependencies
 node_modules/
@@ -32,6 +34,9 @@ yarn-error.*
 
 # local env files
 .env*.local
+
+# Firebase CLI deploy cache
+.firebase/
 
 # typescript
 *.tsbuildinfo
