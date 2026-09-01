@@ -60,10 +60,10 @@ export function buildPickupDate(month, day) {
 export const SHOP_OPEN_HOUR = 9;
 export const SHOP_CLOSE_HOUR = 17;
 
-// จองวันนี้ต้องเผื่อเวลาร้านเตรียมของอย่างน้อย 30 นาทีจากตอนนี้
-const MIN_LEAD_MINUTES = 30;
+// จองวันนี้ต้องเผื่อเวลาร้านเตรียมของอย่างน้อย 1 ชม.จากตอนนี้
+const MIN_LEAD_MINUTES = 60;
 
-// ตัวเลือกเวลา — เฉพาะช่วงเวลาเปิดร้าน ถ้าเป็นวันนี้จะตัดเวลาที่ใกล้กว่า 30 นาทีจากตอนนี้ออก
+// ตัวเลือกเวลา — เฉพาะช่วงเวลาเปิดร้าน ถ้าเป็นวันนี้จะตัดเวลาที่ใกล้กว่า 1 ชม.จากตอนนี้ออก
 export function getTimeOptions(dateStr) {
   const options = [];
   const isToday = dateStr === toLocalDateStr();
