@@ -7,43 +7,68 @@
 export const APP_MAX_WIDTH = 480;
 
 export const colors = {
-  // ส้มอมน้ำตาลไหม้ terracotta — สีหลัก (--color-accent)
-  primary: '#C67139',
-  primaryDark: '#B2622D', // --color-accent-600 (hover)
-  primaryDeep: '#8C491A', // --color-accent-700 (active)
-  primaryGlow: '#F6A06B', // --color-accent-400
+  // ส้มอมน้ำตาลไหม้ terracotta — สีหลัก (--color-accent) เฉดเข้มขึ้นหนึ่งขั้นจากต้นแบบ
+  primary: '#B45F27',
+  primaryDark: '#9C4F1C', // hover
+  primaryDeep: '#7A3B12', // active
+  primaryGlow: '#EE9257',
 
   // เดิมเรียก "ทอง" แต่จริงๆ คือส้มอ่อนไล่ระดับเดียวกับ primary (ไม่มีสีที่ 3 ในดีไซน์ต้นแบบ)
-  gold: '#F6A06B', // --color-accent-400
-  goldLight: '#FFC6A5', // --color-accent-300
+  gold: '#EE9257',
+  goldLight: '#FFBB94',
 
-  // เขียวมะกอกอ่อน (--color-accent-2) — ใช้กับปุ่ม positive/เสร็จแล้ว/เรียกคิวถัดไป
-  leaf: '#728157', // --color-accent-2-600
-  leafLight: '#F0FAE1', // --color-accent-2-100
+  // เขียวมะกอก (--color-accent-2) — ใช้กับปุ่ม positive/เสร็จแล้ว/เรียกคิวถัดไป
+  leaf: '#5E6E45',
+  leafLight: '#E4F1CD',
 
   // โทนเข้ม (พื้นหลังลึก, แอดมิน) — --color-neutral-800/900
-  charcoal: '#2E2B25', // --color-neutral-900
-  charcoalSoft: '#474238', // --color-neutral-800
+  charcoal: '#25231E', // --color-neutral-900
+  charcoalSoft: '#3E3A31', // --color-neutral-800
 
-  // พื้นหลัง/กลาง — --color-bg / --color-surface / --color-neutral-100
-  cream: '#F5EAD8', // --color-bg
-  creamSoft: '#EBDDC5', // --color-surface
-  card: '#F9F4ED', // --color-neutral-100
-  border: '#DCD3C4', // --color-neutral-300
+  // พื้นหลัง/กลาง — พื้นหลังเข้มขึ้นแต่การ์ดยังสว่าง เพื่อให้การ์ดลอยเด่นขึ้นกว่าเดิม
+  cream: '#EBDCC1', // --color-bg
+  creamSoft: '#DECBA9', // --color-surface
+  card: '#FBF7F0', // --color-neutral-100
+  border: '#C8B99C', // --color-neutral-300
 
   // ตัวหนังสือ — --color-text / --color-neutral-700
-  textDark: '#201E1D',
-  textMuted: '#645C50',
+  textDark: '#1A1815',
+  textMuted: '#564E41',
 
   // สถานะ
-  success: '#728157',
-  successBg: '#F0FAE1',
-  warning: '#82796A', // --color-neutral-600 (ดีไซน์ต้นแบบไม่มีสีเหลือง/ส้มแยกสำหรับ "รอ" ใช้กลาง ๆ)
-  warningBg: '#EEE7DB', // --color-neutral-200
-  info: '#8C491A',
-  infoBg: '#FFF2EB',
-  danger: '#B2622D',
-  dangerBg: '#FFE1D0',
+  success: '#5E6E45',
+  successBg: '#E4F1CD',
+  warning: '#6F6656',
+  warningBg: '#E3D7C0',
+  info: '#7A3B12',
+  infoBg: '#FFE9D8',
+  danger: '#9C4F1C',
+  dangerBg: '#FFD4B8',
+};
+
+// เงามาตรฐาน 3 ระดับ — ใช้ให้ตรงกันทุกหน้าแทนการกำหนดเงาเองกระจายในแต่ละไฟล์
+export const shadows = {
+  sm: {
+    shadowColor: '#1A1815',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#1A1815',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  lg: {
+    shadowColor: '#1A1815',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 26,
+    elevation: 9,
+  },
 };
 
 // ไล่สีสำหรับ hero / ปุ่มหลัก — ดีไซน์ต้นแบบใช้สีล้วน (flat) เป็นหลัก ไม่ใช่กราเดียนต์จัด
@@ -56,26 +81,26 @@ export const gradients = {
 
 // ธีมเข้มสำหรับฝั่งแอดมิน — ตรงกับหน้าแอดมินของดีไซน์ต้นแบบ (พื้นหลัง --color-neutral-900)
 export const adminTheme = {
-  bg: '#2E2B25',
-  surface: '#3B372E', // ระหว่าง neutral-800/900 ให้การ์ดเด่นจากพื้นหลังนิดหน่อย
+  bg: '#25231E',
+  surface: '#332F28', // ระหว่าง neutral-800/900 ให้การ์ดเด่นจากพื้นหลังนิดหน่อย
   surfaceAlt: colors.charcoalSoft,
-  border: '#4C463B',
-  text: '#F9F4ED',
-  textMuted: '#C0B6A5', // --color-neutral-400
-  accent: colors.primary,
-  accentDark: colors.primaryDark,
-  cta: '#8FA073', // --color-accent-2-500
-  ctaText: '#2E2B25', // --color-neutral-900 (ตัวหนังสือเข้มบนปุ่มเขียว ตามต้นฉบับ)
+  border: '#463F34',
+  text: '#FBF7F0',
+  textMuted: '#BCB09C', // --color-neutral-400
+  accent: colors.primaryGlow, // บนพื้นเข้มต้องใช้เฉดสว่างกว่าเพื่อให้อ่านออก
+  accentDark: colors.primary,
+  cta: '#8B9C6D', // --color-accent-2-500
+  ctaText: '#25231E', // --color-neutral-900 (ตัวหนังสือเข้มบนปุ่มเขียว ตามต้นฉบับ)
   gold: colors.gold,
-  danger: '#D67F48', // --color-accent-500
-  dangerBg: 'rgba(214,127,72,0.16)',
+  danger: '#E08A50',
+  dangerBg: 'rgba(224,138,80,0.18)',
 };
 
 // สถานะคิวโทนเข้ม (ใช้ในหน้าจัดการคิวของแอดมิน)
 export const ADMIN_STATUS_THEME = {
-  waiting: { label: 'รอเรียก', color: '#C0B6A5', bg: 'rgba(192,182,165,0.16)', icon: 'time-outline' },
-  calling: { label: 'กำลังเรียก', color: adminTheme.accent, bg: 'rgba(198,113,57,0.2)', icon: 'megaphone-outline' },
-  done: { label: 'เสร็จแล้ว', color: adminTheme.cta, bg: 'rgba(143,160,115,0.2)', icon: 'checkmark-circle-outline' },
+  waiting: { label: 'รอเรียก', color: '#BCB09C', bg: 'rgba(188,176,156,0.18)', icon: 'time-outline' },
+  calling: { label: 'กำลังเรียก', color: adminTheme.accent, bg: 'rgba(238,146,87,0.22)', icon: 'megaphone-outline' },
+  done: { label: 'เสร็จแล้ว', color: adminTheme.cta, bg: 'rgba(139,156,109,0.22)', icon: 'checkmark-circle-outline' },
   cancelled: { label: 'ยกเลิก', color: adminTheme.danger, bg: adminTheme.dangerBg, icon: 'close-circle-outline' },
 };
 

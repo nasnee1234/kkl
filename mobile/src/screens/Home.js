@@ -8,7 +8,9 @@ import { useQueue } from '../contexts/QueueContext';
 import { formatQueueLabel } from '../utils/queueNumbers';
 import { getMenuImageUrl } from '../utils/imageUrls';
 import { getLocalMenuImage } from '../assets/menuImages';
-import { colors } from '../theme/colors';
+import PatternBackground from '../components/PatternBackground';
+import FadeInView from '../components/FadeInView';
+import { colors, shadows } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
 const SHOP_MAPS_URL = 'https://maps.app.goo.gl/wEDXyVi2cpxwD5Kc6';
@@ -61,16 +63,19 @@ export default function Home() {
   const bestSellers = (badged.length > 0 ? badged : menus).slice(0, 4);
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.topRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>ร้านไก่กอและกะเมาะห์</Text>
-            <Text style={styles.title}>หิวยังจ๊ะ วันนี้กินอะไร</Text>
+        <FadeInView delay={0}>
+          <View style={styles.topRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eyebrow}>ร้านไก่กอและกะเมาะห์</Text>
+              <Text style={styles.title}>หิวยังจ๊ะ วันนี้กินอะไร</Text>
+            </View>
           </View>
-        </View>
+        </FadeInView>
 
         {/* Hero: กำลังเรียกคิว */}
+        <FadeInView delay={70}>
         <View style={styles.hero}>
           <View style={styles.heroBlob} />
           <View style={styles.heroTop}>
@@ -100,40 +105,46 @@ export default function Home() {
             </TouchableOpacity>
           )}
         </View>
+        </FadeInView>
 
         {/* ค้นหา */}
-        <TouchableOpacity
-          style={styles.searchBox}
-          activeOpacity={0.85}
-          onPress={() => navigation.navigate('เมนู')}
-        >
-          <Ionicons name="search-outline" size={18} color={colors.textDark} />
-          <Text style={styles.searchPlaceholder}>อยากกินไก่กอและไม้ไหน ค้นเลย</Text>
-        </TouchableOpacity>
+        <FadeInView delay={140}>
+          <TouchableOpacity
+            style={styles.searchBox}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('เมนู')}
+          >
+            <Ionicons name="search-outline" size={18} color={colors.textDark} />
+            <Text style={styles.searchPlaceholder}>อยากกินไก่กอและไม้ไหน ค้นเลย</Text>
+          </TouchableOpacity>
+        </FadeInView>
 
         {/* ขายดีประจำร้าน */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>ขายดีประจำร้าน</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('เมนู')}>
-            <Text style={styles.sectionLink}>ดูทั้งหมด</Text>
-          </TouchableOpacity>
-        </View>
+        <FadeInView delay={210}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>ขายดีประจำร้าน</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('เมนู')}>
+              <Text style={styles.sectionLink}>ดูทั้งหมด</Text>
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bestSellerScroll}>
-          {bestSellers.length === 0 ? (
-            <Text style={styles.emptyText}>ยังไม่มีเมนู</Text>
-          ) : (
-            bestSellers.map((item) => (
-              <View key={item.id} style={styles.bestCard}>
-                <BestSellerImage item={item} />
-                <Text style={styles.bestName} numberOfLines={2}>{item.name}</Text>
-                <Text style={styles.bestPrice}>฿{item.price}</Text>
-              </View>
-            ))
-          )}
-        </ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bestSellerScroll}>
+            {bestSellers.length === 0 ? (
+              <Text style={styles.emptyText}>ยังไม่มีเมนู</Text>
+            ) : (
+              bestSellers.map((item) => (
+                <View key={item.id} style={styles.bestCard}>
+                  <BestSellerImage item={item} />
+                  <Text style={styles.bestName} numberOfLines={2}>{item.name}</Text>
+                  <Text style={styles.bestPrice}>฿{item.price}</Text>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </FadeInView>
 
         {/* ข้อมูลร้าน */}
+        <FadeInView delay={280}>
         <TouchableOpacity
           style={styles.shopInfoCard}
           activeOpacity={0.85}
@@ -157,8 +168,9 @@ export default function Home() {
             </View>
           </View>
         </TouchableOpacity>
+        </FadeInView>
       </ScrollView>
-    </View>
+    </PatternBackground>
   );
 }
 
@@ -172,13 +184,9 @@ const styles = StyleSheet.create({
   hero: {
     borderRadius: 28,
     backgroundColor: colors.primary,
-    padding: 20,
+    padding: 24,
     overflow: 'hidden',
-    shadowColor: colors.textDark,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 4,
+    ...shadows.lg,
   },
   heroBlob: {
     position: 'absolute', right: -38, top: -38, width: 132, height: 132,
@@ -187,43 +195,45 @@ const styles = StyleSheet.create({
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   heroEyebrow: { fontFamily: fonts.bodyBold, fontSize: 12, letterSpacing: 1.6, textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' },
   heroNumber: { fontFamily: fonts.heading, fontSize: 52, lineHeight: 56, color: colors.cream },
-  heroBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primaryDeep, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
+  heroBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: colors.primaryDeep, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },
   heroBadgeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.leafLight },
   heroBadgeText: { fontFamily: fonts.bodyBold, fontSize: 12, color: '#fff' },
 
-  ticketRow: { marginTop: 16, backgroundColor: colors.primaryDeep, borderRadius: 16, padding: 14 },
-  ticketTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  ticketRow: { marginTop: 18, backgroundColor: colors.primaryDeep, borderRadius: 18, padding: 16 },
+  ticketTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   ticketText: { fontFamily: fonts.bodyBold, fontSize: 14, color: '#fff' },
-  progressTrack: { marginTop: 10, height: 8, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.25)', overflow: 'hidden' },
+  progressTrack: { marginTop: 12, height: 8, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.28)', overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 999, backgroundColor: colors.leafLight },
 
   searchBox: {
-    height: 50,
+    height: 54,
     borderRadius: 999,
     backgroundColor: colors.card,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    gap: 10,
-    marginTop: 18,
+    paddingHorizontal: 20,
+    gap: 11,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   searchPlaceholder: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 14 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 26, marginBottom: 12 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 30, marginBottom: 14 },
   sectionTitle: { fontFamily: fonts.heading, fontSize: 20, color: colors.textDark },
   sectionLink: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.primaryDeep },
-  bestSellerScroll: { marginTop: -6 },
+  bestSellerScroll: { marginTop: -4, overflow: 'visible' },
   emptyText: { color: colors.textMuted, fontSize: 13, paddingVertical: 20 },
   bestCard: {
-    width: 158,
+    width: 162,
     marginRight: 14,
+    marginBottom: 6,
     backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 10,
-    shadowColor: colors.textDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 1,
+    borderRadius: 22,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   bestImage: { width: '100%', height: 104, borderRadius: 14, backgroundColor: colors.creamSoft },
   bestImagePlaceholder: {
@@ -237,25 +247,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bestImageLabel: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 11, fontWeight: '600' },
-  bestName: { fontFamily: fonts.bodyBold, fontSize: 14, marginTop: 10, lineHeight: 18, color: colors.textDark },
-  bestPrice: { fontFamily: fonts.heading, fontSize: 16, color: colors.primaryDeep, marginTop: 8 },
+  bestName: { fontFamily: fonts.bodyBold, fontSize: 14, marginTop: 12, lineHeight: 19, color: colors.textDark },
+  bestPrice: { fontFamily: fonts.heading, fontSize: 17, color: colors.primaryDeep, marginTop: 10 },
   shopInfoCard: {
-    marginTop: 24,
-    backgroundColor: colors.creamSoft,
+    marginTop: 26,
+    backgroundColor: colors.card,
     borderRadius: 28,
-    padding: 16,
+    padding: 18,
     flexDirection: 'row',
-    gap: 14,
+    gap: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   shopInfoImage: {
-    width: 76, height: 76, flexShrink: 0, borderRadius: 16,
-    backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center',
+    width: 76, height: 76, flexShrink: 0, borderRadius: 18,
+    backgroundColor: colors.creamSoft, alignItems: 'center', justifyContent: 'center',
   },
   shopInfoImageLabel: { fontFamily: fonts.body, fontSize: 10, color: colors.textMuted, textAlign: 'center' },
   shopInfoName: { fontFamily: fonts.heading, fontSize: 17, color: colors.textDark },
-  shopInfoDetail: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, marginTop: 3, lineHeight: 18 },
-  shopInfoRow: { flexDirection: 'row', gap: 14, marginTop: 8 },
+  shopInfoDetail: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, marginTop: 5, lineHeight: 19 },
+  shopInfoRow: { flexDirection: 'row', gap: 16, marginTop: 11 },
   shopInfoItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   shopInfoTime: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.primaryDeep },
 });

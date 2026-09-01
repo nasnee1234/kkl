@@ -24,7 +24,9 @@ import ClosedPopup from '../components/ClosedPopup';
 import Toast, { useToast } from '../components/Toast';
 import SelectField from '../components/SelectField';
 import ScreenHeader from '../components/ScreenHeader';
-import { colors, APP_MAX_WIDTH } from '../theme/colors';
+import PatternBackground from '../components/PatternBackground';
+import FadeInView from '../components/FadeInView';
+import { colors, shadows, APP_MAX_WIDTH } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
 const STATUS_COPY = {
@@ -198,42 +200,53 @@ export default function QueueRequest() {
   // ── ไม่มีคิวอยู่: ปุ่มรับคิวด่วน + ทางเลือกสั่งอาหารพร้อมจอง ──
   if (!myQueue) {
     return (
-      <View style={styles.container}>
+      <PatternBackground>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <ScreenHeader title="คิวของฉัน" />
 
-          <View style={styles.noTicketCard}>
-            <Text style={styles.servingLabelSmall}>ตอนนี้เรียกถึงคิว</Text>
-            <Text style={styles.servingBig}>{formatQueueLabel(callingNumber)}</Text>
-          </View>
+          <FadeInView delay={60}>
+            <View style={styles.noTicketCard}>
+              <Text style={styles.servingLabelSmall}>ตอนนี้เรียกถึงคิว</Text>
+              <Text style={styles.servingBig}>{formatQueueLabel(callingNumber)}</Text>
+            </View>
+          </FadeInView>
 
-          <AnimatedPressable
-            style={[styles.quickBtn, bookingQuick && styles.disabled]}
-            onPress={handleQuickQueue}
-            disabled={bookingQuick}
-          >
-            {bookingQuick ? (
-              <ActivityIndicator color="#fff" size="large" />
-            ) : (
-              <>
-                <Ionicons name="ticket-outline" size={52} color="#fff" />
-                <Text style={styles.quickBtnText}>กดรับคิว</Text>
-                <Text style={styles.quickBtnSub}>แตะปุ่มนี้เพื่อรับคิว</Text>
-              </>
-            )}
-          </AnimatedPressable>
+          <FadeInView delay={130}>
+            <AnimatedPressable
+              style={[styles.quickBtn, bookingQuick && styles.disabled]}
+              onPress={handleQuickQueue}
+              disabled={bookingQuick}
+            >
+              {bookingQuick ? (
+                <ActivityIndicator color="#fff" size="large" />
+              ) : (
+                <>
+                  <View style={styles.quickBtnIcon}>
+                    <Ionicons name="ticket-outline" size={46} color="#fff" />
+                  </View>
+                  <Text style={styles.quickBtnText}>กดรับคิว</Text>
+                  <Text style={styles.quickBtnSub}>แตะปุ่มนี้เพื่อรับคิว</Text>
+                </>
+              )}
+            </AnimatedPressable>
+          </FadeInView>
 
-          <View style={styles.reminderBanner}>
-            <Ionicons name="notifications-outline" size={26} color={colors.leaf} />
-            <Text style={styles.reminderText}>รับคิวแล้วรอที่ไหนก็ได้ โทรศัพท์จะดังและสั่นตอนถึงคิวคุณ</Text>
-          </View>
+          <FadeInView delay={200}>
+            <View style={styles.reminderBanner}>
+              <Ionicons name="notifications-outline" size={26} color={colors.leaf} />
+              <Text style={styles.reminderText}>รับคิวแล้วรอที่ไหนก็ได้ โทรศัพท์จะดังและสั่นตอนถึงคิวคุณ</Text>
+            </View>
+          </FadeInView>
 
-          <TouchableOpacity style={styles.secondaryBtn} onPress={openBookingModal} activeOpacity={0.85}>
-            <Text style={styles.secondaryBtnText}>สั่งออเดอร์ล่วงหน้า เลือกเวลา + เมนู</Text>
-          </TouchableOpacity>
+          <FadeInView delay={260}>
+            <AnimatedPressable style={styles.secondaryBtn} onPress={openBookingModal}>
+              <Ionicons name="calendar-outline" size={20} color="#fff" />
+              <Text style={styles.secondaryBtnText}>สั่งออเดอร์ล่วงหน้า</Text>
+            </AnimatedPressable>
+          </FadeInView>
 
           {myScheduledQueues.length > 0 && (
-            <View style={styles.scheduledListWrap}>
+            <FadeInView delay={320} style={styles.scheduledListWrap}>
               <Text style={styles.sectionLabel}>ออเดอร์ที่สั่งล่วงหน้าไว้</Text>
               {myScheduledQueues.map((sq) => {
                 const isReady = sq.status === 'ready';
@@ -258,13 +271,13 @@ export default function QueueRequest() {
                         <Text style={styles.orderLineRight}>฿{i.price * i.qty}</Text>
                       </View>
                     ))}
-                    <TouchableOpacity onPress={() => handleCancelScheduled(sq.id)}>
+                    <TouchableOpacity style={styles.scheduledCancelBtn} onPress={() => handleCancelScheduled(sq.id)}>
                       <Text style={styles.scheduledCancelText}>ยกเลิกออเดอร์นี้</Text>
                     </TouchableOpacity>
                   </View>
                 );
               })}
-            </View>
+            </FadeInView>
           )}
         </ScrollView>
         <Toast message={toastMsg} />
@@ -355,7 +368,7 @@ export default function QueueRequest() {
             </View>
           </View>
         </Modal>
-      </View>
+      </PatternBackground>
     );
   }
 
@@ -364,7 +377,7 @@ export default function QueueRequest() {
   // ── มีคิวอยู่และยังรอ: การ์ดเข้ม + วงแหวนนับถอยหลัง ──
   if (status === 'waiting') {
     return (
-      <View style={styles.container}>
+      <PatternBackground>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <ScreenHeader title="คิวของฉัน" />
 
@@ -375,6 +388,7 @@ export default function QueueRequest() {
             </TouchableOpacity>
           )}
 
+          <FadeInView delay={60}>
           <View style={styles.ticketCard}>
             <View style={styles.ticketBlob} />
             <View style={styles.ticketTop}>
@@ -411,29 +425,34 @@ export default function QueueRequest() {
               </View>
             </View>
           </View>
+          </FadeInView>
 
           {myQueue.items?.length > 0 && (
-            <View style={styles.orderCard}>
-              <Text style={styles.orderCardTitle}>
-                ออเดอร์ของคุณ{myQueue.pickupTime ? ` · รับ ${myQueue.pickupTime} น.` : ''}
-              </Text>
-              {myQueue.items.map((i, idx) => (
-                <View key={idx} style={styles.orderLine}>
-                  <Text style={styles.orderLineLeft}>{i.name} × {i.qty}</Text>
-                  <Text style={styles.orderLineRight}>฿{i.price * i.qty}</Text>
-                </View>
-              ))}
-            </View>
+            <FadeInView delay={130}>
+              <View style={styles.orderCard}>
+                <Text style={styles.orderCardTitle}>
+                  ออเดอร์ของคุณ{myQueue.pickupTime ? ` · รับ ${myQueue.pickupTime} น.` : ''}
+                </Text>
+                {myQueue.items.map((i, idx) => (
+                  <View key={idx} style={styles.orderLine}>
+                    <Text style={styles.orderLineLeft}>{i.name} × {i.qty}</Text>
+                    <Text style={styles.orderLineRight}>฿{i.price * i.qty}</Text>
+                  </View>
+                ))}
+              </View>
+            </FadeInView>
           )}
 
-          <View style={styles.reminderBanner}>
-            <Ionicons name="notifications-outline" size={22} color={colors.leaf} />
-            <Text style={styles.reminderTextSm}>เปิดเสียงเรียกไว้แล้ว — โทรศัพท์จะดังและสั่นตอนถึงคิวคุณ แม้ปิดหน้าจอ</Text>
-          </View>
+          <FadeInView delay={190}>
+            <View style={styles.reminderBanner}>
+              <Ionicons name="notifications-outline" size={22} color={colors.leaf} />
+              <Text style={styles.reminderTextSm}>เปิดเสียงเรียกไว้แล้ว — โทรศัพท์จะดังและสั่นตอนถึงคิวคุณ แม้ปิดหน้าจอ</Text>
+            </View>
 
-          <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} activeOpacity={0.8}>
-            <Text style={styles.cancelBtnText}>ยกเลิกคิวนี้</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} activeOpacity={0.8}>
+              <Text style={styles.cancelBtnText}>ยกเลิกคิวนี้</Text>
+            </TouchableOpacity>
+          </FadeInView>
         </ScrollView>
         <Toast message={toastMsg} />
 
@@ -443,7 +462,7 @@ export default function QueueRequest() {
           onDismiss={dismissCallAlert}
           onSnooze={dismissCallAlert}
         />
-      </View>
+      </PatternBackground>
     );
   }
 
@@ -456,9 +475,10 @@ export default function QueueRequest() {
     : new Date().toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <ScreenHeader title="คิวของฉัน" />
+        <FadeInView delay={60}>
         <View style={styles.statusCard}>
           <View style={[styles.statusIcon, { backgroundColor: copy.iconBg }]}>
             <Ionicons name={copy.icon} size={40} color="#fff" />
@@ -479,6 +499,7 @@ export default function QueueRequest() {
             </AnimatedPressable>
           )}
         </View>
+        </FadeInView>
       </ScrollView>
 
       <Modal visible={receiptVisible} animationType="fade">
@@ -497,7 +518,7 @@ export default function QueueRequest() {
       </Modal>
 
       <IncomingCallOverlay visible={callAlert} queueNumber={myQueue.number} onDismiss={dismissCallAlert} />
-    </View>
+    </PatternBackground>
   );
 }
 
@@ -505,51 +526,64 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
   content: { padding: 18, paddingTop: 52, paddingBottom: 118 },
 
-  noTicketCard: { backgroundColor: colors.card, borderRadius: 28, padding: 22, paddingBottom: 26, alignItems: 'center' },
+  noTicketCard: {
+    backgroundColor: colors.card, borderRadius: 28, padding: 26, paddingBottom: 30,
+    alignItems: 'center', borderWidth: 1, borderColor: colors.border, ...shadows.md,
+  },
   servingLabelSmall: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.textMuted },
-  servingBig: { fontFamily: fonts.heading, fontSize: 76, lineHeight: 82, color: colors.primaryDeep, marginTop: 4 },
+  servingBig: { fontFamily: fonts.heading, fontSize: 76, lineHeight: 84, color: colors.primaryDeep, marginTop: 6 },
 
   quickBtn: {
-    marginTop: 16,
+    marginTop: 18,
     borderRadius: 28,
-    paddingVertical: 34,
-    paddingHorizontal: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
     backgroundColor: colors.primary,
     alignItems: 'center',
-    gap: 12,
-    shadowColor: colors.textDark,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.22,
-    shadowRadius: 20,
-    elevation: 6,
+    gap: 10,
+    ...shadows.lg,
   },
-  quickBtnText: { fontFamily: fonts.heading, fontSize: 38, lineHeight: 42, color: '#fff' },
-  quickBtnSub: { fontFamily: fonts.bodySemiBold, fontSize: 17, color: '#fff', opacity: 0.95, marginTop: -4 },
+  quickBtnIcon: {
+    width: 78, height: 78, borderRadius: 39,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+  quickBtnText: { fontFamily: fonts.heading, fontSize: 38, lineHeight: 46, color: '#fff' },
+  quickBtnSub: { fontFamily: fonts.bodySemiBold, fontSize: 16, color: '#fff', opacity: 0.92 },
   disabled: { opacity: 0.75 },
 
   reminderBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14,
-    backgroundColor: colors.leafLight, borderRadius: 20, padding: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 13, marginTop: 16,
+    backgroundColor: colors.leafLight, borderRadius: 20, paddingVertical: 18, paddingHorizontal: 18,
+    borderWidth: 1, borderColor: 'rgba(94,110,69,0.22)',
   },
-  reminderText: { flex: 1, fontFamily: fonts.bodySemiBold, fontSize: 15, color: '#3D472B', lineHeight: 21 },
-  reminderTextSm: { flex: 1, fontFamily: fonts.bodySemiBold, fontSize: 13, color: '#3D472B', lineHeight: 19 },
+  reminderText: { flex: 1, fontFamily: fonts.bodySemiBold, fontSize: 15, color: '#3A452A', lineHeight: 22 },
+  reminderTextSm: { flex: 1, fontFamily: fonts.bodySemiBold, fontSize: 13, color: '#3A452A', lineHeight: 20 },
 
   secondaryBtn: {
-    marginTop: 12, borderRadius: 999, paddingVertical: 20,
-    borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.card, alignItems: 'center',
+    marginTop: 14, borderRadius: 999, paddingVertical: 20, paddingHorizontal: 24,
+    backgroundColor: colors.primaryDeep, alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', gap: 10, ...shadows.md,
   },
-  secondaryBtnText: { fontFamily: fonts.heading, fontSize: 19, color: colors.primaryDeep },
+  secondaryBtnText: { fontFamily: fonts.heading, fontSize: 19, color: '#fff' },
 
-  scheduledListWrap: { marginTop: 20 },
-  scheduledItemCard: { backgroundColor: colors.card, borderRadius: 20, padding: 16, marginBottom: 10 },
-  scheduledItemCardReady: { borderWidth: 1.5, borderColor: colors.leaf },
-  scheduledItemHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  scheduledListWrap: { marginTop: 24 },
+  scheduledItemCard: {
+    backgroundColor: colors.card, borderRadius: 20, padding: 18, marginBottom: 12,
+    borderWidth: 1, borderColor: colors.border, ...shadows.sm,
+  },
+  scheduledItemCardReady: { borderWidth: 2, borderColor: colors.leaf },
+  scheduledItemHeader: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 7 },
   scheduledItemDate: { fontFamily: fonts.bodyExtraBold, fontSize: 14.5, color: colors.primaryDeep },
-  scheduledWaitingText: { fontFamily: fonts.bodySemiBold, fontSize: 12.5, color: colors.textMuted, marginBottom: 8 },
-  scheduledReadyText: { fontFamily: fonts.bodyExtraBold, fontSize: 12.5, color: colors.leaf, marginBottom: 8 },
-  scheduledCancelText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, marginTop: 6 },
+  scheduledWaitingText: { fontFamily: fonts.bodySemiBold, fontSize: 12.5, color: colors.textMuted, marginBottom: 12 },
+  scheduledReadyText: { fontFamily: fonts.bodyExtraBold, fontSize: 12.5, color: colors.leaf, marginBottom: 12 },
+  scheduledCancelBtn: { marginTop: 10, paddingVertical: 10, alignSelf: 'flex-start' },
+  scheduledCancelText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted },
 
-  orderCard: { marginTop: 14, backgroundColor: colors.card, borderRadius: 20, padding: 16 },
+  orderCard: {
+    marginTop: 16, backgroundColor: colors.card, borderRadius: 20, padding: 18,
+    borderWidth: 1, borderColor: colors.border, ...shadows.sm,
+  },
   orderCardTitle: { fontFamily: fonts.bodyExtraBold, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textMuted, marginBottom: 10 },
   orderLine: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   orderLineLeft: { fontFamily: fonts.body, fontSize: 14, color: colors.textDark, flex: 1, marginRight: 8 },
@@ -557,77 +591,85 @@ const styles = StyleSheet.create({
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   bookingBox: {
-    backgroundColor: colors.cream, borderRadius: 24, padding: 22, maxHeight: '88%',
-    width: '100%', maxWidth: APP_MAX_WIDTH, alignSelf: 'center',
+    backgroundColor: colors.cream, borderRadius: 26, padding: 24, maxHeight: '88%',
+    width: '100%', maxWidth: APP_MAX_WIDTH, alignSelf: 'center', ...shadows.lg,
   },
-  modalTitle: { fontFamily: fonts.heading, fontSize: 20, color: colors.textDark, marginBottom: 14 },
-  bookingList: { maxHeight: 260 },
+  modalTitle: { fontFamily: fonts.heading, fontSize: 21, color: colors.textDark, marginBottom: 16 },
+  bookingList: { maxHeight: 280 },
   bookingEmpty: { textAlign: 'center', color: colors.textMuted, paddingVertical: 20 },
   bookingRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  bookingItemName: { fontFamily: fonts.bodyBold, fontSize: 14.5, color: colors.textDark },
-  bookingItemPrice: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textMuted, marginTop: 2 },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.creamSoft, borderRadius: 999, padding: 4 },
-  stepperBtn: { width: 28, height: 28, borderRadius: 999, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
-  stepperBtnAdd: { backgroundColor: colors.primary },
-  stepperQty: { fontFamily: fonts.bodyExtraBold, fontSize: 14, minWidth: 13, textAlign: 'center', color: colors.textDark },
-  sectionLabel: { fontFamily: fonts.bodyExtraBold, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textMuted, marginTop: 18, marginBottom: 10 },
-  selectRow: { flexDirection: 'row', gap: 10 },
+  bookingItemName: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.textDark },
+  bookingItemPrice: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, marginTop: 4 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.creamSoft, borderRadius: 999, padding: 5 },
+  stepperBtn: {
+    width: 34, height: 34, borderRadius: 999, backgroundColor: colors.card,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
+  },
+  stepperBtnAdd: { backgroundColor: colors.primary, borderColor: colors.primary },
+  stepperQty: { fontFamily: fonts.bodyExtraBold, fontSize: 15, minWidth: 22, textAlign: 'center', color: colors.textDark },
+  sectionLabel: { fontFamily: fonts.bodyExtraBold, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textMuted, marginTop: 22, marginBottom: 12 },
+  selectRow: { flexDirection: 'row', gap: 12 },
   timeColon: { fontFamily: fonts.bodyExtraBold, fontSize: 18, color: colors.textDark },
-  selectedSummary: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, marginTop: 10 },
-  timeEmptyBox: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 18, alignItems: 'center' },
+  selectedSummary: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, marginTop: 12 },
+  timeEmptyBox: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 20, alignItems: 'center' },
   timeEmptyText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   bookingTotalRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
-    marginTop: 18, paddingTop: 12, borderTopWidth: 1.5, borderTopColor: colors.border, borderStyle: 'dashed',
+    marginTop: 22, paddingTop: 16, borderTopWidth: 1.5, borderTopColor: colors.border, borderStyle: 'dashed',
   },
   bookingTotalLabel: { fontFamily: fonts.bodyExtraBold, fontSize: 14, color: colors.textDark },
-  bookingTotalValue: { fontFamily: fonts.heading, fontSize: 22, color: colors.primaryDeep },
+  bookingTotalValue: { fontFamily: fonts.heading, fontSize: 23, color: colors.primaryDeep },
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
-    backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 17, marginTop: 16,
+    backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 19, marginTop: 18,
+    ...shadows.md,
   },
-  saveBtnText: { fontFamily: fonts.heading, fontSize: 16, color: '#fff' },
-  cancelBtn2: { padding: 12, alignItems: 'center', marginTop: 4 },
-  cancelBtnText2: { fontFamily: fonts.bodySemiBold, color: colors.textMuted, fontSize: 14 },
+  saveBtnText: { fontFamily: fonts.heading, fontSize: 17, color: '#fff' },
+  cancelBtn2: { paddingVertical: 15, alignItems: 'center', marginTop: 6 },
+  cancelBtnText2: { fontFamily: fonts.bodySemiBold, color: colors.textMuted, fontSize: 14.5 },
 
   preWarnBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.gold,
-    borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.primary,
+    borderRadius: 18, paddingHorizontal: 18, paddingVertical: 15, marginBottom: 16, ...shadows.sm,
   },
-  preWarnText: { flex: 1, fontFamily: fonts.bodyExtraBold, fontSize: 14, color: '#fff' },
+  preWarnText: { flex: 1, fontFamily: fonts.bodyExtraBold, fontSize: 14, color: '#fff', lineHeight: 20 },
 
   ticketCard: {
-    backgroundColor: colors.charcoal, borderRadius: 28, padding: 22, overflow: 'hidden', position: 'relative',
+    backgroundColor: colors.charcoal, borderRadius: 28, padding: 24, overflow: 'hidden',
+    position: 'relative', ...shadows.lg,
   },
   ticketBlob: {
     position: 'absolute', left: -30, bottom: -40, width: 130, height: 130,
-    borderRadius: 65, backgroundColor: colors.primaryDeep, opacity: 0.5,
+    borderRadius: 65, backgroundColor: colors.primary, opacity: 0.55,
   },
-  ticketTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  ticketEyebrow: { fontFamily: fonts.bodyBold, fontSize: 11.5, letterSpacing: 1.4, textTransform: 'uppercase', color: '#C0B6A5' },
-  ticketNumber: { fontFamily: fonts.heading, fontSize: 60, lineHeight: 64, color: colors.primaryGlow },
+  ticketTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14 },
+  ticketEyebrow: { fontFamily: fonts.bodyBold, fontSize: 11.5, letterSpacing: 1.4, textTransform: 'uppercase', color: '#BCB09C' },
+  ticketNumber: { fontFamily: fonts.heading, fontSize: 60, lineHeight: 68, color: colors.primaryGlow },
   ringMinutes: { fontFamily: fonts.heading, fontSize: 18, color: '#fff' },
-  ringSub: { fontFamily: fonts.body, fontSize: 9, color: '#C0B6A5' },
-  ticketDivider: { marginTop: 18, paddingTop: 16, borderTopWidth: 1.5, borderTopColor: 'rgba(255,255,255,0.22)', borderStyle: 'dashed' },
-  ticketStatsRow: { flexDirection: 'row', gap: 22 },
-  ticketStatLabel: { fontFamily: fonts.body, fontSize: 11, color: '#C0B6A5' },
-  ticketStatValue: { fontFamily: fonts.heading, fontSize: 18, color: '#fff', marginTop: 2 },
+  ringSub: { fontFamily: fonts.body, fontSize: 9, color: '#BCB09C' },
+  ticketDivider: { marginTop: 20, paddingTop: 18, borderTopWidth: 1.5, borderTopColor: 'rgba(255,255,255,0.22)', borderStyle: 'dashed' },
+  ticketStatsRow: { flexDirection: 'row', gap: 24 },
+  ticketStatLabel: { fontFamily: fonts.body, fontSize: 11, color: '#BCB09C' },
+  ticketStatValue: { fontFamily: fonts.heading, fontSize: 18, color: '#fff', marginTop: 4 },
 
-  cancelBtn: { marginTop: 14, paddingVertical: 18, borderRadius: 999, alignItems: 'center' },
+  cancelBtn: { marginTop: 16, paddingVertical: 18, borderRadius: 999, alignItems: 'center', borderWidth: 1.5, borderColor: colors.border },
   cancelBtnText: { fontFamily: fonts.bodyExtraBold, fontSize: 16, color: colors.primaryDeep },
 
-  statusCard: { backgroundColor: colors.card, borderRadius: 28, padding: 26, alignItems: 'center' },
-  statusIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  statusTitle: { fontFamily: fonts.heading, fontSize: 22, color: colors.textDark },
-  statusNumber: { fontFamily: fonts.heading, fontSize: 48, color: colors.primaryDeep, marginTop: 6 },
-  statusNote: { fontFamily: fonts.bodySemiBold, fontSize: 15, color: colors.textMuted, marginTop: 6 },
-  receiptBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18 },
+  statusCard: {
+    backgroundColor: colors.card, borderRadius: 28, padding: 30, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.border, ...shadows.md,
+  },
+  statusIcon: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: 16, ...shadows.sm },
+  statusTitle: { fontFamily: fonts.heading, fontSize: 22, color: colors.textDark, textAlign: 'center' },
+  statusNumber: { fontFamily: fonts.heading, fontSize: 50, lineHeight: 58, color: colors.primaryDeep, marginTop: 8 },
+  statusNote: { fontFamily: fonts.bodySemiBold, fontSize: 15, color: colors.textMuted, marginTop: 8, textAlign: 'center', lineHeight: 21 },
+  receiptBtn: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 22, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 999, backgroundColor: colors.creamSoft },
   receiptBtnText: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.primaryDeep },
-  newQueueBtn: { marginTop: 14, borderWidth: 1.5, borderColor: colors.primaryDeep, borderRadius: 999, paddingHorizontal: 24, paddingVertical: 12 },
-  newQueueText: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.primaryDeep },
+  newQueueBtn: { marginTop: 16, backgroundColor: colors.primary, borderRadius: 999, paddingHorizontal: 32, paddingVertical: 15, ...shadows.sm },
+  newQueueText: { fontFamily: fonts.bodyBold, fontSize: 15, color: '#fff' },
 
   receiptOverlay: { flex: 1, backgroundColor: colors.leaf },
   receiptScroll: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24, paddingTop: 60 },

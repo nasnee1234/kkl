@@ -3,7 +3,8 @@ import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import { useQueue } from '../contexts/QueueContext';
 import ScreenHeader from '../components/ScreenHeader';
-import { colors } from '../theme/colors';
+import PatternBackground from '../components/PatternBackground';
+import { colors, shadows } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
 const TONE = {
@@ -28,7 +29,7 @@ export default function Notifications() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.headerWrap}>
         <ScreenHeader
           title="แจ้งเตือน"
@@ -71,7 +72,7 @@ export default function Notifications() {
           );
         }}
       />
-    </View>
+    </PatternBackground>
   );
 }
 
@@ -83,13 +84,14 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 80, gap: 10 },
   emptyText: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 14 },
   row: {
-    flexDirection: 'row', gap: 13, backgroundColor: colors.card, borderRadius: 20,
-    padding: 15, marginBottom: 10, borderWidth: 1, borderColor: colors.border,
+    flexDirection: 'row', gap: 15, backgroundColor: colors.card, borderRadius: 22,
+    padding: 17, marginBottom: 12, borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
-  rowRead: { backgroundColor: 'transparent', borderColor: 'transparent' },
-  icon: { width: 42, height: 42, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  message: { flex: 1, fontFamily: fonts.bodyExtraBold, fontSize: 14.5, color: colors.textDark, lineHeight: 20 },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
-  time: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textMuted, marginTop: 7 },
+  rowRead: { backgroundColor: 'rgba(251,247,240,0.55)', borderColor: 'transparent', shadowOpacity: 0, elevation: 0 },
+  icon: { width: 44, height: 44, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  message: { flex: 1, fontFamily: fonts.bodyExtraBold, fontSize: 14.5, color: colors.textDark, lineHeight: 21 },
+  unreadDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.primary },
+  time: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textMuted, marginTop: 8 },
 });

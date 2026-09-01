@@ -14,7 +14,8 @@ import { db } from '../config/firebase';
 import { getMenuImageUrl } from '../utils/imageUrls';
 import { getLocalMenuImage } from '../assets/menuImages';
 import ScreenHeader from '../components/ScreenHeader';
-import { colors } from '../theme/colors';
+import PatternBackground from '../components/PatternBackground';
+import { colors, shadows } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
 function FoodThumb({ item }) {
@@ -83,7 +84,7 @@ export default function FoodMenu() {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -118,7 +119,7 @@ export default function FoodMenu() {
           </View>
         )}
       />
-    </View>
+    </PatternBackground>
   );
 }
 
@@ -127,40 +128,41 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream },
   menuHeader: { marginTop: 52, marginHorizontal: 18 },
   searchBox: {
-    height: 48,
+    height: 54,
     borderRadius: 999,
     backgroundColor: colors.card,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 10,
+    paddingHorizontal: 20,
+    gap: 11,
     marginHorizontal: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   searchInput: { flex: 1, fontFamily: fonts.body, color: colors.textDark, fontSize: 14 },
-  list: { paddingHorizontal: 18, paddingBottom: 30 },
+  list: { paddingHorizontal: 18, paddingBottom: 118 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
+    gap: 16,
     backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 12,
+    borderRadius: 22,
+    padding: 14,
     marginTop: 16,
-    shadowColor: colors.textDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
-  foodImage: { width: 78, height: 78, borderRadius: 16, backgroundColor: colors.creamSoft },
+  foodImage: { width: 82, height: 82, borderRadius: 18, backgroundColor: colors.creamSoft },
   artBox: {
-    width: 78, height: 78, borderRadius: 16, backgroundColor: colors.creamSoft,
+    width: 82, height: 82, borderRadius: 18, backgroundColor: colors.creamSoft,
     borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center',
   },
   artLabel: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 10 },
   foodInfo: { flex: 1, minWidth: 0 },
-  foodName: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.textDark, flexShrink: 1 },
-  price: { fontFamily: fonts.heading, fontSize: 17, color: colors.primaryDeep, marginTop: 9 },
+  foodName: { fontFamily: fonts.bodyBold, fontSize: 15.5, color: colors.textDark, flexShrink: 1, lineHeight: 21 },
+  price: { fontFamily: fonts.heading, fontSize: 18, color: colors.primaryDeep, marginTop: 10 },
   empty: { textAlign: 'center', color: colors.textMuted, fontSize: 14, marginTop: 36, paddingHorizontal: 20 },
 });
