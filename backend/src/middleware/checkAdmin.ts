@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { auth } from '../config/firebaseAdmin';
 
-export const ALLOWED_ADMIN_EMAILS = ['nasnee1997@gmail.com'];
+export const ALLOWED_ADMIN_EMAILS = ['admin@gmail.com'];
 
 export interface AuthedRequest extends Request {
   user?: { uid: string; email: string | null };

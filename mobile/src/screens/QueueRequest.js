@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -10,11 +10,11 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useQueue } from '../contexts/QueueContext';
 import { db } from '../config/firebase';
-import { createQueueWithNumber, formatQueueLabel } from '../utils/queueNumbers';
+import { createQueueWithNumber, createScheduledQueue, formatQueueLabel, toLocalDateStr } from '../utils/queueNumbers';
+import { getDateOptions, getTimeOptions, formatPickupDateLabel } from '../utils/pickupSchedule';
 import { registerForPushNotifications } from '../utils/notifications';
 import AnimatedPressable from '../components/AnimatedPressable';
 import ProgressRing from '../components/ProgressRing';
@@ -22,6 +22,7 @@ import Receipt from '../components/Receipt';
 import IncomingCallOverlay from '../components/IncomingCallOverlay';
 import ClosedPopup from '../components/ClosedPopup';
 import Toast, { useToast } from '../components/Toast';
+import WheelPicker from '../components/WheelPicker';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
@@ -31,8 +32,9 @@ const STATUS_COPY = {
   cancelled: { title: 'คิวถูกยกเลิก', note: 'คุณสามารถสั่งใหม่ได้', icon: 'close-outline', iconBg: colors.primaryDeep },
 };
 
+const DATE_OPTIONS = getDateOptions(7);
+
 export default function QueueRequest() {
-  const navigation = useNavigation();
   const {
     myQueue, takeQueue, clearQueue, callAlert, preWarning, dismissCallAlert, dismissPreWarning,
     callingNumber, queueProgress, acceptingQueue,
@@ -42,14 +44,86 @@ export default function QueueRequest() {
   const [closedPopupVisible, setClosedPopupVisible] = useState(false);
   const [queueFullMessage, setQueueFullMessage] = useState(null);
   const [toastMsg, showToast] = useToast();
+  const [menus, setMenus] = useState([]);
+  const [bookingModalVisible, setBookingModalVisible] = useState(false);
+  const [cartQty, setCartQty] = useState({});
+  const [pickupDate, setPickupDate] = useState(DATE_OPTIONS[0].value);
+  const [pickupTime, setPickupTime] = useState('');
+  const [bookingSaving, setBookingSaving] = useState(false);
 
-  const goMenu = () => navigation.navigate('เมนู');
-  const goCheckout = () => {
+  const timeOptions = getTimeOptions(pickupDate);
+
+  useEffect(() => {
+    const q = query(collection(db, 'menus'), orderBy('createdAt', 'asc'));
+    const unsub = onSnapshot(q, (snap) => {
+      setMenus(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
+  }, []);
+
+  const selectedItems = menus
+    .filter((m) => cartQty[m.id] > 0)
+    .map((m) => ({ menuId: m.id, name: m.name, price: m.price, qty: cartQty[m.id] }));
+  const bookingTotal = selectedItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+  const updateQty = (menuId, delta) => {
+    setCartQty((prev) => ({ ...prev, [menuId]: Math.max(0, (prev[menuId] || 0) + delta) }));
+  };
+
+  const changePickupDate = (value) => {
+    setPickupDate(value);
+    const nextTimes = getTimeOptions(value);
+    setPickupTime(nextTimes[0]?.value || '');
+  };
+
+  const openBookingModal = () => {
     if (!acceptingQueue) {
       setClosedPopupVisible(true);
       return;
     }
-    navigation.navigate('Checkout');
+    setCartQty({});
+    const firstDate = DATE_OPTIONS[0].value;
+    setPickupDate(firstDate);
+    setPickupTime(getTimeOptions(firstDate)[0]?.value || '');
+    setBookingModalVisible(true);
+  };
+
+  const handleBookingConfirm = async () => {
+    if (bookingSaving || selectedItems.length === 0 || !pickupTime) return;
+    setBookingSaving(true);
+    const isToday = pickupDate === toLocalDateStr();
+    try {
+      const { pushToken, webPushSubscription } = await registerForPushNotifications();
+      const baseData = {
+        customerName: 'ลูกค้า',
+        items: selectedItems,
+        pickupDate,
+        pickupTime,
+        phone: null,
+        pushToken: pushToken || null,
+        webPushSubscription: webPushSubscription || null,
+      };
+
+      if (isToday) {
+        const queue = await createQueueWithNumber({ ...baseData, status: 'waiting', createdAt: serverTimestamp() });
+        takeQueue({ id: queue.id, number: queue.number, status: 'waiting', ...baseData });
+        showToast(`จองคิวแล้ว! คิวของคุณคือ ${formatQueueLabel(queue.number)}`);
+      } else {
+        const queue = await createScheduledQueue(baseData);
+        takeQueue({ id: queue.id, number: null, status: 'scheduled', ...baseData });
+        showToast(`จองคิวล่วงหน้าแล้ว! วันที่ ${formatPickupDateLabel(pickupDate)}`);
+      }
+      setBookingModalVisible(false);
+    } catch (e) {
+      if (e.code === 'QUEUE_FULL') {
+        setBookingModalVisible(false);
+        setQueueFullMessage(e.message);
+      } else {
+        Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถจองคิวได้ กรุณาลองใหม่');
+      }
+    } finally {
+      setBookingSaving(false);
+    }
   };
 
   const handleQuickQueue = async () => {
@@ -127,8 +201,8 @@ export default function QueueRequest() {
             <Text style={styles.reminderText}>รับคิวแล้วรอที่ไหนก็ได้ โทรศัพท์จะดังและสั่นตอนถึงคิวคุณ</Text>
           </View>
 
-          <TouchableOpacity style={styles.secondaryBtn} onPress={goCheckout} activeOpacity={0.85}>
-            <Text style={styles.secondaryBtnText}>สั่งอาหารพร้อมจองคิว</Text>
+          <TouchableOpacity style={styles.secondaryBtn} onPress={openBookingModal} activeOpacity={0.85}>
+            <Text style={styles.secondaryBtnText}>จองคิว เลือกเวลา + เมนู</Text>
           </TouchableOpacity>
         </ScrollView>
         <Toast message={toastMsg} />
@@ -140,18 +214,117 @@ export default function QueueRequest() {
           title="คิวเต็มแล้ว"
           message={queueFullMessage || ''}
         />
+
+        <Modal visible={bookingModalVisible} transparent animationType="slide">
+          <View style={styles.overlay}>
+            <View style={styles.bookingBox}>
+              <Text style={styles.modalTitle}>จองคิว + เลือกเมนู</Text>
+
+              <ScrollView style={styles.bookingList} keyboardShouldPersistTaps="handled">
+                {menus.length === 0 ? (
+                  <Text style={styles.bookingEmpty}>ยังไม่มีเมนู</Text>
+                ) : (
+                  menus.map((item) => (
+                    <View key={item.id} style={styles.bookingRow}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.bookingItemName} numberOfLines={1}>{item.name}</Text>
+                        <Text style={styles.bookingItemPrice}>฿{item.price}</Text>
+                      </View>
+                      <View style={styles.stepper}>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => updateQty(item.id, -1)}>
+                          <Ionicons name="remove" size={14} color={colors.textDark} />
+                        </TouchableOpacity>
+                        <Text style={styles.stepperQty}>{cartQty[item.id] || 0}</Text>
+                        <TouchableOpacity style={[styles.stepperBtn, styles.stepperBtnAdd]} onPress={() => updateQty(item.id, 1)}>
+                          <Ionicons name="add" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+
+              <Text style={styles.sectionLabel}>มารับตอนไหน</Text>
+              <View style={styles.wheelsRow}>
+                <WheelPicker options={DATE_OPTIONS} value={pickupDate} onChange={changePickupDate} />
+                {timeOptions.length > 0 ? (
+                  <WheelPicker options={timeOptions} value={pickupTime} onChange={setPickupTime} />
+                ) : (
+                  <View style={styles.wheelEmptyBox}>
+                    <Text style={styles.wheelEmptyText}>ร้านปิดแล้ว{'\n'}เลือกวันอื่น</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.bookingTotalRow}>
+                <Text style={styles.bookingTotalLabel}>ยอดรวม</Text>
+                <Text style={styles.bookingTotalValue}>฿{bookingTotal.toLocaleString()}</Text>
+              </View>
+
+              <AnimatedPressable
+                style={[styles.saveBtn, (bookingSaving || selectedItems.length === 0 || !pickupTime) && { opacity: 0.6 }]}
+                onPress={handleBookingConfirm}
+                disabled={bookingSaving || selectedItems.length === 0 || !pickupTime}
+              >
+                {bookingSaving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.saveBtnText}>
+                    {selectedItems.length === 0 ? 'เลือกอย่างน้อย 1 เมนู' : 'ยืนยันจองคิว'}
+                  </Text>
+                )}
+              </AnimatedPressable>
+              <TouchableOpacity style={styles.cancelBtn2} onPress={() => setBookingModalVisible(false)}>
+                <Text style={styles.cancelBtnText2}>ยกเลิก</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
 
   const status = myQueue.status || 'waiting';
 
+  // ── จองล่วงหน้าไว้ ยังไม่ถึงวันนัด: ยังไม่มีเลขคิวจริง ──
+  if (status === 'scheduled') {
+    return (
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <Text style={styles.h2}>คิวของฉัน</Text>
+
+          <View style={styles.scheduledCard}>
+            <Ionicons name="calendar-outline" size={44} color={colors.primaryDeep} />
+            <Text style={styles.scheduledTitle}>จองคิวล่วงหน้าแล้ว</Text>
+            <Text style={styles.scheduledDate}>
+              {formatPickupDateLabel(myQueue.pickupDate)} · {myQueue.pickupTime} น.
+            </Text>
+            <Text style={styles.scheduledNote}>ถึงวันนัดแล้วระบบจะออกเลขคิวให้อัตโนมัติ</Text>
+          </View>
+
+          {myQueue.items?.length > 0 && (
+            <View style={styles.orderCard}>
+              <Text style={styles.orderCardTitle}>ออเดอร์ของคุณ</Text>
+              {myQueue.items.map((i, idx) => (
+                <View key={idx} style={styles.orderLine}>
+                  <Text style={styles.orderLineLeft}>{i.name} × {i.qty}</Text>
+                  <Text style={styles.orderLineRight}>฿{i.price * i.qty}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} activeOpacity={0.8}>
+            <Text style={styles.cancelBtnText}>ยกเลิกการจอง</Text>
+          </TouchableOpacity>
+        </ScrollView>
+        <Toast message={toastMsg} />
+      </View>
+    );
+  }
+
   // ── มีคิวอยู่และยังรอ: การ์ดเข้ม + วงแหวนนับถอยหลัง ──
   if (status === 'waiting') {
-    const orderLines = myQueue.items?.length
-      ? myQueue.items.map((i) => ({ left: `${i.name} × ${i.qty}`, right: `฿${i.price * i.qty}` }))
-      : [{ left: 'รับคิวหน้าร้าน · สั่งอาหารตอนถึงคิว', right: 'ที่ร้าน' }];
-
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -201,15 +374,19 @@ export default function QueueRequest() {
             </View>
           </View>
 
-          <View style={styles.orderCard}>
-            <Text style={styles.orderCardTitle}>ออเดอร์ของคุณ</Text>
-            {orderLines.map((l, i) => (
-              <View key={i} style={styles.orderLine}>
-                <Text style={styles.orderLineLeft}>{l.left}</Text>
-                <Text style={styles.orderLineRight}>{l.right}</Text>
-              </View>
-            ))}
-          </View>
+          {myQueue.items?.length > 0 && (
+            <View style={styles.orderCard}>
+              <Text style={styles.orderCardTitle}>
+                ออเดอร์ของคุณ{myQueue.pickupTime ? ` · รับ ${myQueue.pickupTime} น.` : ''}
+              </Text>
+              {myQueue.items.map((i, idx) => (
+                <View key={idx} style={styles.orderLine}>
+                  <Text style={styles.orderLineLeft}>{i.name} × {i.qty}</Text>
+                  <Text style={styles.orderLineRight}>฿{i.price * i.qty}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           <View style={styles.reminderBanner}>
             <Ionicons name="notifications-outline" size={22} color={colors.leaf} />
@@ -326,6 +503,52 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: { fontFamily: fonts.heading, fontSize: 19, color: colors.primaryDeep },
 
+  scheduledCard: {
+    backgroundColor: colors.card, borderRadius: 28, padding: 26, alignItems: 'center',
+  },
+  scheduledTitle: { fontFamily: fonts.heading, fontSize: 22, color: colors.textDark, marginTop: 12 },
+  scheduledDate: { fontFamily: fonts.bodyExtraBold, fontSize: 18, color: colors.primaryDeep, marginTop: 8 },
+  scheduledNote: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, marginTop: 8, textAlign: 'center' },
+
+  orderCard: { marginTop: 14, backgroundColor: colors.card, borderRadius: 20, padding: 16 },
+  orderCardTitle: { fontFamily: fonts.bodyExtraBold, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textMuted, marginBottom: 10 },
+  orderLine: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  orderLineLeft: { fontFamily: fonts.body, fontSize: 14, color: colors.textDark, flex: 1, marginRight: 8 },
+  orderLineRight: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.textDark },
+
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  bookingBox: { backgroundColor: colors.cream, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22, maxHeight: '88%' },
+  modalTitle: { fontFamily: fonts.heading, fontSize: 20, color: colors.textDark, marginBottom: 14 },
+  bookingList: { maxHeight: 260 },
+  bookingEmpty: { textAlign: 'center', color: colors.textMuted, paddingVertical: 20 },
+  bookingRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  bookingItemName: { fontFamily: fonts.bodyBold, fontSize: 14.5, color: colors.textDark },
+  bookingItemPrice: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textMuted, marginTop: 2 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.creamSoft, borderRadius: 999, padding: 4 },
+  stepperBtn: { width: 28, height: 28, borderRadius: 999, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
+  stepperBtnAdd: { backgroundColor: colors.primary },
+  stepperQty: { fontFamily: fonts.bodyExtraBold, fontSize: 14, minWidth: 13, textAlign: 'center', color: colors.textDark },
+  sectionLabel: { fontFamily: fonts.bodyExtraBold, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textMuted, marginTop: 18, marginBottom: 10 },
+  wheelsRow: { flexDirection: 'row', gap: 10 },
+  wheelEmptyBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  wheelEmptyText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, textAlign: 'center' },
+  bookingTotalRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
+    marginTop: 18, paddingTop: 12, borderTopWidth: 1.5, borderTopColor: colors.border, borderStyle: 'dashed',
+  },
+  bookingTotalLabel: { fontFamily: fonts.bodyExtraBold, fontSize: 14, color: colors.textDark },
+  bookingTotalValue: { fontFamily: fonts.heading, fontSize: 22, color: colors.primaryDeep },
+  saveBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
+    backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 17, marginTop: 16,
+  },
+  saveBtnText: { fontFamily: fonts.heading, fontSize: 16, color: '#fff' },
+  cancelBtn2: { padding: 12, alignItems: 'center', marginTop: 4 },
+  cancelBtnText2: { fontFamily: fonts.bodySemiBold, color: colors.textMuted, fontSize: 14 },
+
   preWarnBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.gold,
     borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 14,
@@ -348,12 +571,6 @@ const styles = StyleSheet.create({
   ticketStatsRow: { flexDirection: 'row', gap: 22 },
   ticketStatLabel: { fontFamily: fonts.body, fontSize: 11, color: '#C0B6A5' },
   ticketStatValue: { fontFamily: fonts.heading, fontSize: 18, color: '#fff', marginTop: 2 },
-
-  orderCard: { marginTop: 14, backgroundColor: colors.card, borderRadius: 20, padding: 16 },
-  orderCardTitle: { fontFamily: fonts.bodyExtraBold, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textMuted, marginBottom: 10 },
-  orderLine: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  orderLineLeft: { fontFamily: fonts.body, fontSize: 14, color: colors.textDark, flex: 1, marginRight: 8 },
-  orderLineRight: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.textDark },
 
   cancelBtn: { marginTop: 14, paddingVertical: 18, borderRadius: 999, alignItems: 'center' },
   cancelBtnText: { fontFamily: fonts.bodyExtraBold, fontSize: 16, color: colors.primaryDeep },

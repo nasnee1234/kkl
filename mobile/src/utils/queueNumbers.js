@@ -3,6 +3,7 @@ import {
   doc,
   runTransaction,
   serverTimestamp,
+  addDoc,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -15,6 +16,14 @@ export const MAX_QUEUE_PER_DAY = 700;
 export function formatQueueLabel(number) {
   if (number == null) return '—';
   return 'A' + String(number).padStart(2, '0');
+}
+
+// วันที่ปัจจุบันแบบ YYYY-MM-DD ตามเวลาเครื่อง (ไม่ใช้ toISOString เพราะมันตัดเป็น UTC อาจเพี้ยนวันใกล้เที่ยงคืน)
+export function toLocalDateStr(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export async function createQueueWithNumber(queueData) {
@@ -47,5 +56,40 @@ export async function createQueueWithNumber(queueData) {
     });
 
     return { id: queueRef.id, number: nextNumber };
+  });
+}
+
+// จองล่วงหน้าข้ามวัน — ยังไม่ได้เลขคิวจริง รอวันที่นัดถึงแล้วแอดมิน "เปิด" ระบบคิว ระบบจะดึงเข้าคิวจริงให้อัตโนมัติ
+export async function createScheduledQueue(queueData) {
+  const queueRef = await addDoc(collection(db, 'queues'), {
+    ...queueData,
+    status: 'scheduled',
+    createdAt: serverTimestamp(),
+  });
+  return { id: queueRef.id };
+}
+
+// ดึงคิวที่จองล่วงหน้าไว้ (ถึงวันนัดแล้ว) เข้าคิวจริงของวันนี้ — ให้เลขคิวจริงตามลำดับที่เรียก
+export async function activateScheduledQueue(queueId) {
+  return runTransaction(db, async (transaction) => {
+    const queueRef = doc(db, 'queues', queueId);
+    const counterSnapshot = await transaction.get(queueCounterRef);
+    const counterNumber = counterSnapshot.exists()
+      ? Number(counterSnapshot.data().lastNumber) || 0
+      : 0;
+    const nextNumber = counterNumber + 1;
+
+    transaction.set(
+      queueCounterRef,
+      { lastNumber: nextNumber, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+    transaction.update(queueRef, {
+      number: nextNumber,
+      status: 'waiting',
+      createdAt: serverTimestamp(),
+    });
+
+    return { number: nextNumber };
   });
 }

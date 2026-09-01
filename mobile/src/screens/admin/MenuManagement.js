@@ -14,7 +14,7 @@ import { MENU_IMAGE_MAP, MENU_IMAGE_KEYS, getLocalMenuImage } from '../../assets
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { adminTheme } from '../../theme/colors';
 
-const EMPTY_FORM = { name: '', price: '', description: '', imageKey: '', emoji: '🍗', stock: '', category: '', badge: '' };
+const EMPTY_FORM = { name: '', price: '', imageKey: '', emoji: '🍗' };
 
 function MenuPreview({ item }) {
   const localImage = getLocalMenuImage(item.imageKey);
@@ -84,31 +84,20 @@ export default function MenuManagement() {
     setForm({
       name: item.name,
       price: String(item.price),
-      description: item.description || '',
       imageKey: item.imageKey || '',
       emoji: item.emoji || '🍗',
-      stock: String(item.stock),
-      category: item.category || '',
-      badge: item.badge || '',
     });
     setModalOpen(true);
   };
 
-  const existingCategories = [...new Set(menus.map((m) => m.category).filter(Boolean))];
-
   const handleSave = async () => {
-    if (!form.name.trim() || !form.price || !form.stock) {
-      Alert.alert('แจ้งเตือน', 'กรุณากรอกชื่อ ราคา และจำนวนสต็อก');
+    if (!form.name.trim() || !form.price) {
+      Alert.alert('แจ้งเตือน', 'กรุณากรอกชื่อและราคา');
       return;
     }
     const price = Number(form.price);
-    const stock = Number(form.stock);
     if (isNaN(price) || price <= 0) {
       Alert.alert('แจ้งเตือน', 'ราคาต้องเป็นตัวเลขที่มากกว่า 0');
-      return;
-    }
-    if (isNaN(stock) || stock < 0) {
-      Alert.alert('แจ้งเตือน', 'สต็อกต้องเป็นตัวเลข 0 ขึ้นไป');
       return;
     }
 
@@ -117,12 +106,8 @@ export default function MenuManagement() {
       const data = {
         name: form.name.trim(),
         price,
-        description: form.description.trim(),
         imageKey: form.imageKey || '',
         emoji: form.emoji.trim() || '🍗',
-        stock,
-        category: form.category.trim(),
-        badge: form.badge.trim(),
         updatedAt: serverTimestamp(),
       };
       if (editTarget) {
@@ -156,11 +141,6 @@ export default function MenuManagement() {
     }
   };
 
-  const adjustStock = async (item, delta) => {
-    const newStock = Math.max(0, (item.stock || 0) + delta);
-    await updateDoc(doc(db, 'menus', item.id), { stock: newStock, updatedAt: serverTimestamp() });
-  };
-
   if (loading) {
     return (
       <View style={styles.center}>
@@ -185,53 +165,24 @@ export default function MenuManagement() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={<Text style={styles.empty}>ยังไม่มีเมนู กด "เพิ่มเมนู" เพื่อเริ่มต้น</Text>}
-        renderItem={({ item }) => {
-          const outOfStock = item.stock === 0;
-          return (
-            <View style={[styles.card, outOfStock && styles.cardDim]}>
-              <MenuPreview item={item} />
-              <View style={styles.cardInfo}>
-                <View style={styles.cardRow}>
-                  <Text style={styles.cardName}>{item.name}</Text>
-                  {item.badge ? (
-                    <View style={styles.specialBadge}>
-                      <Text style={styles.specialBadgeText}>{item.badge}</Text>
-                    </View>
-                  ) : null}
-                  {outOfStock && (
-                    <View style={styles.outBadge}>
-                      <Text style={styles.outBadgeText}>สินค้าหมด</Text>
-                    </View>
-                  )}
-                </View>
-                {item.category ? <Text style={styles.cardCategory}>{item.category}</Text> : null}
-                <Text style={styles.cardPrice}>฿{item.price}</Text>
-
-                {/* Stock control */}
-                <View style={styles.stockRow}>
-                  <TouchableOpacity style={styles.stockBtn} onPress={() => adjustStock(item, -1)}>
-                    <Ionicons name="remove" size={16} color={adminTheme.danger} />
-                  </TouchableOpacity>
-                  <Text style={[styles.stockNum, outOfStock && { color: adminTheme.danger }]}>
-                    {item.stock} ชิ้น
-                  </Text>
-                  <TouchableOpacity style={styles.stockBtn} onPress={() => adjustStock(item, 1)}>
-                    <Ionicons name="add" size={16} color={adminTheme.cta} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.cardActions}>
-                <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
-                  <Ionicons name="create-outline" size={18} color={adminTheme.accent} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
-                  <Ionicons name="trash-outline" size={18} color={adminTheme.danger} />
-                </TouchableOpacity>
-              </View>
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <MenuPreview item={item} />
+            <View style={styles.cardInfo}>
+              <Text style={styles.cardName}>{item.name}</Text>
+              <Text style={styles.cardPrice}>฿{item.price}</Text>
             </View>
-          );
-        }}
+
+            <View style={styles.cardActions}>
+              <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
+                <Ionicons name="create-outline" size={18} color={adminTheme.accent} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
+                <Ionicons name="trash-outline" size={18} color={adminTheme.danger} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       />
 
       {/* Add / Edit Modal */}
@@ -243,7 +194,6 @@ export default function MenuManagement() {
             {[
               { label: 'ชื่อเมนู *', key: 'name', placeholder: 'เช่น ไก่กอและ' },
               { label: 'ราคา (บาท) *', key: 'price', placeholder: '0', keyboardType: 'numeric' },
-              { label: 'จำนวนสินค้าที่มีอยู่ *', key: 'stock', placeholder: '0', keyboardType: 'numeric' },
             ].map((field) => (
               <View key={field.key} style={styles.fieldBox}>
                 <Text style={styles.fieldLabel}>{field.label}</Text>
@@ -294,39 +244,7 @@ export default function MenuManagement() {
               )}
             </View>
 
-            {/* หมวดหมู่ — เลือกจากที่เคยมีมาก่อน หรือพิมพ์ใหม่ */}
-            <View style={styles.fieldBox}>
-              <Text style={styles.fieldLabel}>หมวดหมู่</Text>
-              {existingCategories.length > 0 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-                  <View style={styles.categoryPickerRow}>
-                    {existingCategories.map((cat) => (
-                      <TouchableOpacity
-                        key={cat}
-                        style={[styles.categoryChip, form.category === cat && styles.categoryChipActive]}
-                        onPress={() => setForm((f) => ({ ...f, category: cat }))}
-                      >
-                        <Text style={[styles.categoryChipText, form.category === cat && styles.categoryChipTextActive]}>
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              )}
-              <TextInput
-                style={styles.fieldInput}
-                value={form.category}
-                onChangeText={(v) => setForm((f) => ({ ...f, category: v }))}
-                placeholder="เช่น ไก่กอและ, ชุดสุดคุ้ม, เครื่องดื่ม"
-                placeholderTextColor={adminTheme.textMuted}
-                autoCapitalize="none"
-              />
-            </View>
-
             {[
-              { label: 'ป้ายพิเศษ (ไม่บังคับ)', key: 'badge', placeholder: 'เช่น ขายดี, คุ้มสุด' },
-              { label: 'คำอธิบาย', key: 'description', placeholder: 'บรรยายเมนู...' },
               { label: 'อีโมจิสำรอง (แสดงถ้ายังไม่มีรูป)', key: 'emoji', placeholder: '🍗' },
             ].map((field) => (
               <View key={field.key} style={styles.fieldBox}>
@@ -406,7 +324,6 @@ const styles = StyleSheet.create({
     backgroundColor: adminTheme.surface, borderRadius: 16, padding: 14, flexDirection: 'row',
     alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: adminTheme.border,
   },
-  cardDim: { opacity: 0.6 },
   previewImage: { width: 64, height: 54, borderRadius: 10, marginRight: 12, backgroundColor: adminTheme.surfaceAlt },
   previewFallback: {
     width: 64,
@@ -419,22 +336,8 @@ const styles = StyleSheet.create({
   },
   previewEmoji: { fontSize: 30 },
   cardInfo: { flex: 1 },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardName: { fontSize: 15, fontWeight: '600', color: adminTheme.text },
-  outBadge: { backgroundColor: adminTheme.dangerBg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
-  outBadgeText: { fontSize: 11, color: adminTheme.danger, fontWeight: '700' },
-  specialBadge: { backgroundColor: 'rgba(143,160,115,0.22)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
-  specialBadgeText: { fontSize: 10, color: adminTheme.cta, fontWeight: '800' },
-  cardCategory: { fontSize: 11, color: adminTheme.textMuted, marginTop: 2 },
   cardPrice: { fontSize: 13, color: adminTheme.gold, fontWeight: '700', marginTop: 2 },
-  categoryPickerRow: { flexDirection: 'row', gap: 8 },
-  categoryChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: adminTheme.surfaceAlt, borderWidth: 1, borderColor: adminTheme.border },
-  categoryChipActive: { backgroundColor: adminTheme.accent, borderColor: adminTheme.accent },
-  categoryChipText: { fontSize: 12, color: adminTheme.textMuted, fontWeight: '600' },
-  categoryChipTextActive: { color: '#fff' },
-  stockRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
-  stockBtn: { width: 26, height: 26, borderRadius: 8, backgroundColor: adminTheme.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  stockNum: { fontSize: 13, fontWeight: '700', color: adminTheme.text, minWidth: 48, textAlign: 'center' },
   cardActions: { gap: 8 },
   editBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: adminTheme.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   deleteBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: adminTheme.dangerBg, alignItems: 'center', justifyContent: 'center' },

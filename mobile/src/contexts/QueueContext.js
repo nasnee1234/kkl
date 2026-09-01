@@ -109,6 +109,7 @@ export function QueueProvider({ children }) {
         setMyQueue((prev) => ({
           ...prev,
           status: newStatus,
+          number: data.number ?? prev?.number ?? null,
           saleAmount: data.saleAmount ?? prev?.saleAmount ?? null,
           paymentMethod: data.paymentMethod ?? prev?.paymentMethod ?? null,
           doneAt: data.doneAt ?? prev?.doneAt ?? null,
@@ -116,12 +117,14 @@ export function QueueProvider({ children }) {
 
         if (prevStatusRef.current !== 'calling' && newStatus === 'calling') {
           vibrate([0, 400, 150, 400, 150, 400]);
-          speak(`ถึงคิวของคุณแล้ว หมายเลข ${myQueue.number} กรุณามาที่เคาน์เตอร์`);
+          speak(`ถึงคิวของคุณแล้ว หมายเลข ${data.number} กรุณามาที่เคาน์เตอร์`);
           setPreWarning(false);
           setCallAlert(true);
-          pushNotification(`🔔 ถึงคิวของคุณแล้ว! หมายเลข ${myQueue.number} กรุณามาที่เคาน์เตอร์`);
+          pushNotification(`🔔 ถึงคิวของคุณแล้ว! หมายเลข ${data.number} กรุณามาที่เคาน์เตอร์`);
         } else if (prevStatusRef.current !== 'done' && newStatus === 'done') {
-          pushNotification(`✅ คิวหมายเลข ${myQueue.number} เสร็จสิ้นแล้ว ขอบคุณที่ใช้บริการ`);
+          pushNotification(`✅ คิวหมายเลข ${data.number} เสร็จสิ้นแล้ว ขอบคุณที่ใช้บริการ`);
+        } else if (prevStatusRef.current === 'scheduled' && newStatus === 'waiting') {
+          pushNotification(`📋 ถึงวันนัดแล้ว! คิวของคุณคือหมายเลข ${data.number}`);
         }
 
         prevStatusRef.current = newStatus;
@@ -152,9 +155,9 @@ export function QueueProvider({ children }) {
     }
   }, [callingNumber, myQueue?.id, myQueue?.status, myQueue?.number, preAlertEnabled]);
 
-  // รับคิวใหม่ — รับอ็อบเจกต์เต็ม (id, number, items, phone) จากหน้า Checkout หรือปุ่มรับคิวด่วน
+  // รับคิวใหม่ — รับอ็อบเจกต์เต็ม (id, number) จากปุ่มรับคิวด่วน
   const takeQueue = (queue) => {
-    prevStatusRef.current = 'waiting';
+    prevStatusRef.current = queue.status || 'waiting';
     preWarnedRef.current = false;
     setCallAlert(false);
     setPreWarning(false);

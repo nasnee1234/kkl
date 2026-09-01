@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Caprasimo_400Regular } from '@expo-google-fonts/caprasimo';
 import {
@@ -23,14 +23,13 @@ import Home from './src/screens/Home';
 import FoodMenu from './src/screens/FoodMenu';
 import QueueRequest from './src/screens/QueueRequest';
 import Notifications from './src/screens/Notifications';
-import Checkout from './src/screens/Checkout';
 import MyProfile from './src/screens/MyProfile';
 import AdminLogin from './src/screens/admin/AdminLogin';
 import MenuManagement from './src/screens/admin/MenuManagement';
 import SalesSummary from './src/screens/admin/SalesSummary';
 import QueueManagement from './src/screens/admin/QueueManagement';
+import ConfirmDialog from './src/components/ConfirmDialog';
 import { QueueProvider, useQueue } from './src/contexts/QueueContext';
-import { CartProvider } from './src/contexts/CartContext';
 import { auth } from './src/config/firebase';
 import { colors, adminTheme } from './src/theme/colors';
 
@@ -109,29 +108,55 @@ function CustomerTabs() {
 }
 
 function AdminTabs() {
+  const [logoutConfirmVisible, setLogoutConfirmVisible] = useState(false);
+
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          const icons = {
-            'เมนูอาหาร': focused ? 'fast-food' : 'fast-food-outline',
-            'ยอดขาย': focused ? 'bar-chart' : 'bar-chart-outline',
-            'จัดการคิว': focused ? 'list' : 'list-outline',
-          };
-          return <Ionicons name={icons[route.name]} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: adminTheme.cta,
-        tabBarInactiveTintColor: adminTheme.textMuted,
-        tabBarStyle: { backgroundColor: adminTheme.surface, borderTopColor: adminTheme.border, height: 60 },
-        headerStyle: { backgroundColor: adminTheme.bg },
-        headerTintColor: adminTheme.text,
-        headerTitleStyle: { fontWeight: 'bold' },
-      })}
-    >
-      <Tab.Screen name="เมนูอาหาร" component={MenuManagement} options={{ title: 'จัดการเมนู' }} />
-      <Tab.Screen name="ยอดขาย" component={SalesSummary} options={{ title: 'สรุปยอดขาย' }} />
-      <Tab.Screen name="จัดการคิว" component={QueueManagement} options={{ title: 'ระบบคิว' }} />
-    </Tab.Navigator>
+    <>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          tabBarIcon: ({ focused, color, size }) => {
+            const icons = {
+              'เมนูอาหาร': focused ? 'fast-food' : 'fast-food-outline',
+              'ยอดขาย': focused ? 'bar-chart' : 'bar-chart-outline',
+              'จัดการคิว': focused ? 'list' : 'list-outline',
+            };
+            return <Ionicons name={icons[route.name]} size={size} color={color} />;
+          },
+          tabBarActiveTintColor: adminTheme.cta,
+          tabBarInactiveTintColor: adminTheme.textMuted,
+          tabBarStyle: { backgroundColor: adminTheme.surface, borderTopColor: adminTheme.border, height: 60 },
+          headerStyle: { backgroundColor: adminTheme.bg },
+          headerTintColor: adminTheme.text,
+          headerTitleStyle: { fontWeight: 'bold' },
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => setLogoutConfirmVisible(true)}
+              style={{ marginRight: 16 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="log-out-outline" size={24} color={adminTheme.text} />
+            </TouchableOpacity>
+          ),
+        })}
+      >
+        <Tab.Screen name="เมนูอาหาร" component={MenuManagement} options={{ title: 'จัดการเมนู' }} />
+        <Tab.Screen name="ยอดขาย" component={SalesSummary} options={{ title: 'สรุปยอดขาย' }} />
+        <Tab.Screen name="จัดการคิว" component={QueueManagement} options={{ title: 'ระบบคิว' }} />
+      </Tab.Navigator>
+
+      <ConfirmDialog
+        visible={logoutConfirmVisible}
+        icon="log-out-outline"
+        title="ออกจากระบบ?"
+        message="คุณต้องการออกจากระบบผู้ดูแลใช่หรือไม่"
+        confirmLabel="ออกจากระบบ"
+        onCancel={() => setLogoutConfirmVisible(false)}
+        onConfirm={() => {
+          setLogoutConfirmVisible(false);
+          signOut(auth);
+        }}
+      />
+    </>
   );
 }
 
@@ -188,26 +213,23 @@ export default function App() {
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <QueueProvider>
-        <CartProvider>
-          <NavigationContainer>
-            <StatusBar style="light" />
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="CustomerTabs" component={CustomerTabs} />
-              <Stack.Screen name="Checkout" component={Checkout} />
-              <Stack.Screen
-                name="AdminLogin"
-                component={AdminLogin}
-                options={{
-                  headerShown: true,
-                  title: 'เข้าสู่ระบบผู้ดูแล',
-                  headerStyle: { backgroundColor: adminTheme.bg },
-                  headerTintColor: adminTheme.text,
-                }}
-              />
-              <Stack.Screen name="AdminTabs" component={AdminGuard} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </CartProvider>
+        <NavigationContainer>
+          <StatusBar style="light" />
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="CustomerTabs" component={CustomerTabs} />
+            <Stack.Screen
+              name="AdminLogin"
+              component={AdminLogin}
+              options={{
+                headerShown: true,
+                title: 'เข้าสู่ระบบผู้ดูแล',
+                headerStyle: { backgroundColor: adminTheme.bg },
+                headerTintColor: adminTheme.text,
+              }}
+            />
+            <Stack.Screen name="AdminTabs" component={AdminGuard} />
+          </Stack.Navigator>
+        </NavigationContainer>
       </QueueProvider>
     </View>
   );

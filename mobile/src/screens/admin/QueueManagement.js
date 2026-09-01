@@ -6,10 +6,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc,
-  doc, serverTimestamp, query, orderBy, writeBatch,
+  doc, serverTimestamp, query, orderBy, where, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { createQueueWithNumber, MAX_QUEUE_PER_DAY } from '../../utils/queueNumbers';
+import { createQueueWithNumber, activateScheduledQueue, toLocalDateStr, MAX_QUEUE_PER_DAY } from '../../utils/queueNumbers';
+import { formatPickupDateLabel } from '../../utils/pickupSchedule';
 import { sendPushNotification } from '../../utils/notifications';
 import { sendWebPush } from '../../utils/webPush';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -39,8 +40,13 @@ export default function QueueManagement() {
   const [togglingAccept, setTogglingAccept] = useState(false);
   const [resetConfirmVisible, setResetConfirmVisible] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [scheduledQueues, setScheduledQueues] = useState([]);
+  const [scheduledExpanded, setScheduledExpanded] = useState(true);
+  const [cancelScheduledTarget, setCancelScheduledTarget] = useState(null);
   const queuesRef = useRef(queues);
   queuesRef.current = queues;
+  const scheduledRef = useRef(scheduledQueues);
+  scheduledRef.current = scheduledQueues;
 
   // Realtime listener
   useEffect(() => {
@@ -69,6 +75,42 @@ export default function QueueManagement() {
         .forEach((q) => updateDoc(doc(db, 'queues', q.id), { status: 'cancelled' }));
     };
     const interval = setInterval(checkNoShows, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // คิวที่จองล่วงหน้าไว้ (ยังไม่ได้เลขคิวจริง)
+  useEffect(() => {
+    const q = query(collection(db, 'queues'), where('status', '==', 'scheduled'));
+    const unsub = onSnapshot(q, (snap) => {
+      setScheduledQueues(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, () => {});
+    return unsub;
+  }, []);
+
+  // ถึงวันนัดแล้ว — ดึงคิวที่จองล่วงหน้าเข้าคิวจริงของวันนี้อัตโนมัติ (เรียงตามเวลาที่นัดไว้)
+  // ตรวจทันทีเมื่อรายการจองเปลี่ยน (กันพลาดตอนโหลดครั้งแรกที่ realtime listener ยังไม่ทันมีข้อมูล)
+  // และตรวจซ้ำเป็นระยะเผื่อกรณีข้ามวันเที่ยงคืนโดยไม่มีการเปลี่ยนแปลงรายการ
+  const activateDueBookingsRef = useRef();
+  activateDueBookingsRef.current = async () => {
+    const today = toLocalDateStr();
+    const due = scheduledRef.current
+      .filter((q) => q.pickupDate <= today)
+      .sort((a, b) => (a.pickupTime || '').localeCompare(b.pickupTime || ''));
+    for (const q of due) {
+      try {
+        await activateScheduledQueue(q.id);
+      } catch (e) {
+        console.error('activateScheduledQueue:', e.message);
+      }
+    }
+  };
+
+  useEffect(() => {
+    activateDueBookingsRef.current();
+  }, [scheduledQueues]);
+
+  useEffect(() => {
+    const interval = setInterval(() => activateDueBookingsRef.current(), 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -237,6 +279,17 @@ export default function QueueManagement() {
     }
   };
 
+  const performCancelScheduled = async () => {
+    if (!cancelScheduledTarget) return;
+    try {
+      await deleteDoc(doc(db, 'queues', cancelScheduledTarget.id));
+    } catch (e) {
+      Alert.alert('เกิดข้อผิดพลาด', e.message);
+    } finally {
+      setCancelScheduledTarget(null);
+    }
+  };
+
   const FILTERS = [
     { key: 'all',     label: `ทั้งหมด (${activeQueues.length})` },
     { key: 'waiting', label: `รอ (${stats.waiting})` },
@@ -297,6 +350,44 @@ export default function QueueManagement() {
           <Text style={styles.resetBtnText}>เริ่มคิวใหม่</Text>
         </TouchableOpacity>
       </View>
+
+      {/* จองล่วงหน้า */}
+      {scheduledQueues.length > 0 && (
+        <View style={styles.scheduledSection}>
+          <TouchableOpacity style={styles.scheduledHeader} onPress={() => setScheduledExpanded((v) => !v)}>
+            <Ionicons name="calendar-outline" size={16} color={adminTheme.accent} />
+            <Text style={styles.scheduledHeaderText}>จองล่วงหน้า ({scheduledQueues.length})</Text>
+            <Ionicons name={scheduledExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={adminTheme.textMuted} />
+          </TouchableOpacity>
+          {scheduledExpanded && (
+            <View style={styles.scheduledList}>
+              {[...scheduledQueues]
+                .sort((a, b) => (a.pickupDate + a.pickupTime).localeCompare(b.pickupDate + b.pickupTime))
+                .map((item) => (
+                  <View key={item.id} style={styles.scheduledRow}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.scheduledDate}>
+                        {formatPickupDateLabel(item.pickupDate)} · {item.pickupTime} น.
+                      </Text>
+                      <Text style={styles.scheduledName}>{item.customerName}</Text>
+                      {item.items?.length > 0 && (
+                        <Text style={styles.scheduledItems} numberOfLines={2}>
+                          {item.items.map((i) => `${i.name} x${i.qty}`).join(', ')}
+                        </Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { backgroundColor: adminTheme.dangerBg }]}
+                      onPress={() => setCancelScheduledTarget(item)}
+                    >
+                      <Ionicons name="close-outline" size={16} color={adminTheme.danger} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Realtime badge */}
       <View style={styles.realtimeBadge}>
@@ -486,6 +577,21 @@ export default function QueueManagement() {
         onCancel={() => setDeleteTarget(null)}
         onConfirm={performDelete}
       />
+
+      {/* Cancel Scheduled Booking Confirm */}
+      <ConfirmDialog
+        visible={!!cancelScheduledTarget}
+        icon="close-outline"
+        title="ยกเลิกการจอง"
+        message={
+          cancelScheduledTarget
+            ? `ต้องการยกเลิกการจองของ "${cancelScheduledTarget.customerName}" (${formatPickupDateLabel(cancelScheduledTarget.pickupDate)} · ${cancelScheduledTarget.pickupTime} น.) หรือไม่?`
+            : ''
+        }
+        confirmLabel="ยกเลิกการจอง"
+        onCancel={() => setCancelScheduledTarget(null)}
+        onConfirm={performCancelScheduled}
+      />
     </View>
   );
 }
@@ -520,6 +626,20 @@ const styles = StyleSheet.create({
   addBtnText: { color: adminTheme.ctaText, fontSize: 13, fontWeight: '700' },
   resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: adminTheme.border, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 },
   resetBtnText: { color: adminTheme.textMuted, fontSize: 13, fontWeight: '700' },
+  scheduledSection: {
+    marginHorizontal: 16, marginTop: 14, borderRadius: 16,
+    backgroundColor: adminTheme.surface, borderWidth: 1, borderColor: adminTheme.border, overflow: 'hidden',
+  },
+  scheduledHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14 },
+  scheduledHeaderText: { flex: 1, color: adminTheme.text, fontSize: 14, fontWeight: '700' },
+  scheduledList: { paddingHorizontal: 14, paddingBottom: 12, gap: 10 },
+  scheduledRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: adminTheme.surfaceAlt, borderRadius: 12, padding: 12,
+  },
+  scheduledDate: { color: adminTheme.accent, fontSize: 13, fontWeight: '800' },
+  scheduledName: { color: adminTheme.text, fontSize: 14, fontWeight: '600', marginTop: 2 },
+  scheduledItems: { color: adminTheme.textMuted, fontSize: 12, marginTop: 3, lineHeight: 16 },
   realtimeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 4 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: adminTheme.cta },
   realtimeText: { fontSize: 12, color: adminTheme.cta, fontWeight: '600' },

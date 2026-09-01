@@ -7,7 +7,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email == 'nasnee1997@gmail.com';
+        && request.auth.token.email == 'admin@gmail.com';
     }
 
     // เมนูอาหาร: ลูกค้าดูได้โดยไม่ต้องล็อกอิน, แก้ไขได้เฉพาะแอดมิน
@@ -17,11 +17,17 @@ service cloud.firestore {
     }
 
     // คิว: ลูกค้าไม่ล็อกอินก็สร้าง/อ่านคิวของตัวเองได้ (ดูสถานะแบบเรียลไทม์)
-    // แต่เปลี่ยนสถานะ/ลบคิวได้เฉพาะแอดมินเท่านั้น
+    // เปลี่ยนสถานะ/ลบคิวทำได้เฉพาะแอดมิน ยกเว้นลูกค้ายกเลิกคิวของตัวเอง (แก้ได้แค่ field status เป็น 'cancelled'
+    // จากสถานะ waiting/scheduled เท่านั้น — ไม่มีระบบล็อกอินลูกค้าจึงอ้างอิงสิทธิ์ด้วย document id ที่รู้เฉพาะเจ้าของคิว)
     match /queues/{queueId} {
       allow read: if true;
       allow create: if true;
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        resource.data.status in ['waiting', 'scheduled'] &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+        request.resource.data.status == 'cancelled'
+      );
+      allow delete: if isAdmin();
     }
 
     // ตัวนับหมายเลขคิว: ความเสี่ยงต่ำ เปิดให้อ่าน/เขียนได้เพื่อออกเลขคิว
