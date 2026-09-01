@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  TextInput,
   ScrollView,
   Linking,
 } from 'react-native';
@@ -21,15 +20,7 @@ const SHOP_PHONE_LABEL = '081-277-3375';
 export default function MyProfile() {
   const navigation = useNavigation();
   const { soundEnabled, vibrateEnabled, preAlertEnabled, toggleSound, toggleVibrate, togglePreAlert } = useQueue();
-  const [user, setUser] = useState({ name: 'ผู้ใช้งาน', phone: '' });
-  const [editOpen, setEditOpen] = useState(false);
-  const [phone, setPhone] = useState('');
   const [helpOpen, setHelpOpen] = useState(false);
-
-  const handleSave = () => {
-    setUser((prev) => ({ ...prev, phone }));
-    setEditOpen(false);
-  };
 
   const toggles = [
     { key: 'sound', icon: 'volume-high-outline', name: 'เสียงเรียกคิว', desc: 'ดังเป็นเสียงระฆังตอนถึงคิวคุณ', value: soundEnabled, onToggle: toggleSound },
@@ -43,19 +34,7 @@ export default function MyProfile() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.profileRow}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user.name.charAt(0) || 'ผ'}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.userName}>{user.name}</Text>
-          <TouchableOpacity onPress={() => { setPhone(user.phone); setEditOpen(true); }}>
-            <Text style={styles.userPhone}>
-              {user.phone || 'ยังไม่ได้ระบุเบอร์'} · แตะเพื่อแก้ไข
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Text style={styles.screenTitle}>ฉัน</Text>
 
       <View style={styles.card}>
         {toggles.map((t, i) => (
@@ -131,28 +110,6 @@ export default function MyProfile() {
           </View>
         </View>
       </Modal>
-
-      <Modal visible={editOpen} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>แก้ไขเบอร์โทร</Text>
-            <TextInput
-              style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="0xx-xxx-xxxx"
-              keyboardType="phone-pad"
-              placeholderTextColor={colors.textMuted}
-            />
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-              <Text style={styles.saveBtnText}>บันทึก</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditOpen(false)}>
-              <Text style={styles.cancelBtnText}>ยกเลิก</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
@@ -160,11 +117,7 @@ export default function MyProfile() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
   content: { padding: 18, paddingTop: 52, paddingBottom: 118 },
-  profileRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20 },
-  avatar: { width: 66, height: 66, borderRadius: 33, backgroundColor: colors.leafLight, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontFamily: fonts.heading, fontSize: 24, color: '#3D472B' },
-  userName: { fontFamily: fonts.heading, fontSize: 22, color: colors.textDark },
-  userPhone: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, marginTop: 3 },
+  screenTitle: { fontFamily: fonts.heading, fontSize: 26, color: colors.textDark, marginBottom: 16 },
 
   card: { backgroundColor: colors.card, borderRadius: 28, overflow: 'hidden' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 13, padding: 16 },
@@ -198,12 +151,6 @@ const styles = StyleSheet.create({
   },
   helpPhoneLabel: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
   helpPhoneNumber: { fontFamily: fonts.bodyExtraBold, fontSize: 17, color: colors.textDark, marginTop: 2 },
-  input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 999, padding: 14,
-    fontFamily: fonts.body, fontSize: 15, color: colors.textDark, marginBottom: 16,
-  },
-  saveBtn: { backgroundColor: colors.primary, borderRadius: 999, padding: 16, alignItems: 'center', marginBottom: 8 },
-  saveBtnText: { fontFamily: fonts.heading, fontSize: 16, color: '#fff' },
   cancelBtn: { borderRadius: 999, padding: 14, alignItems: 'center' },
   cancelBtnText: { fontFamily: fonts.bodySemiBold, fontSize: 15, color: colors.textMuted },
 });

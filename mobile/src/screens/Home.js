@@ -68,9 +68,6 @@ export default function Home() {
             <Text style={styles.eyebrow}>ร้านไก่กอและกะเมาะห์</Text>
             <Text style={styles.title}>หิวยังจ๊ะ วันนี้กินอะไร</Text>
           </View>
-          <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('ฉัน')}>
-            <Text style={styles.avatarText}>น</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Hero: กำลังเรียกคิว */}
@@ -171,11 +168,6 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
   eyebrow: { fontFamily: fonts.bodySemiBold, fontSize: 12, letterSpacing: 1.6, textTransform: 'uppercase', color: colors.primaryDeep },
   title: { fontFamily: fonts.heading, fontSize: 26, lineHeight: 30, color: colors.textDark, marginTop: 4 },
-  avatar: {
-    width: 48, height: 48, borderRadius: 24, flex: undefined,
-    backgroundColor: colors.leafLight, alignItems: 'center', justifyContent: 'center',
-  },
-  avatarText: { fontFamily: fonts.heading, fontSize: 18, color: '#3D472B' },
 
   hero: {
     borderRadius: 28,
