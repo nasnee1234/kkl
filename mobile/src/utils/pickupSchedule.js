@@ -2,6 +2,26 @@ import { toLocalDateStr } from './queueNumbers';
 
 const WEEKDAYS_TH = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
 const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+export const MONTHS_FULL_TH = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+];
+
+// จัดกลุ่มตัวเลือกวันที่ (จาก getDateOptions) เป็น { เดือน -> [วันที่ในเดือนนั้น] } — ใช้กับ dropdown เดือน/วันแยกกัน
+export function groupDateOptionsByMonth(dateOptions) {
+  const monthOptions = [];
+  const daysByMonth = {};
+  dateOptions.forEach((opt) => {
+    const [y, m, d] = opt.value.split('-');
+    const monthKey = `${y}-${m}`;
+    if (!daysByMonth[monthKey]) {
+      daysByMonth[monthKey] = [];
+      monthOptions.push({ value: monthKey, label: MONTHS_FULL_TH[Number(m) - 1] });
+    }
+    daysByMonth[monthKey].push({ value: opt.value, label: String(Number(d)) });
+  });
+  return { monthOptions, daysByMonth };
+}
 
 // ร้านเปิด 9:00–17:00 (ต้องตรงกับที่แสดงในหน้าแรก)
 export const SHOP_OPEN_HOUR = 9;

@@ -14,7 +14,7 @@ import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc
 import { useQueue } from '../contexts/QueueContext';
 import { db } from '../config/firebase';
 import { createQueueWithNumber, createScheduledQueue, formatQueueLabel, toLocalDateStr } from '../utils/queueNumbers';
-import { getDateOptions, getTimeOptions, formatPickupDateLabel } from '../utils/pickupSchedule';
+import { getDateOptions, getTimeOptions, formatPickupDateLabel, groupDateOptionsByMonth } from '../utils/pickupSchedule';
 import { registerForPushNotifications } from '../utils/notifications';
 import AnimatedPressable from '../components/AnimatedPressable';
 import ProgressRing from '../components/ProgressRing';
@@ -22,7 +22,7 @@ import Receipt from '../components/Receipt';
 import IncomingCallOverlay from '../components/IncomingCallOverlay';
 import ClosedPopup from '../components/ClosedPopup';
 import Toast, { useToast } from '../components/Toast';
-import DateCalendarPicker from '../components/DateCalendarPicker';
+import SelectField from '../components/SelectField';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
@@ -33,6 +33,7 @@ const STATUS_COPY = {
 };
 
 const DATE_OPTIONS = getDateOptions(7);
+const { monthOptions: MONTH_OPTIONS, daysByMonth: DAYS_BY_MONTH } = groupDateOptionsByMonth(DATE_OPTIONS);
 
 export default function QueueRequest() {
   const {
@@ -75,6 +76,29 @@ export default function QueueRequest() {
     const nextTimes = getTimeOptions(value);
     setPickupTime(nextTimes[0]?.value || '');
   };
+
+  const pickupMonthKey = pickupDate.slice(0, 7); // "YYYY-MM"
+  const dayOptions = DAYS_BY_MONTH[pickupMonthKey] || [];
+
+  const changeMonth = (monthKey) => {
+    const days = DAYS_BY_MONTH[monthKey];
+    if (!days || days.length === 0) return;
+    const currentDay = pickupDate.slice(8, 10);
+    const sameDay = days.find((d) => d.value.slice(8, 10) === currentDay);
+    changePickupDate(sameDay ? sameDay.value : days[0].value);
+  };
+
+  const hourOptions = [...new Set(timeOptions.map((t) => t.value.split(':')[0]))].map((h) => ({ value: h, label: h }));
+  const currentHour = pickupTime ? pickupTime.split(':')[0] : (hourOptions[0]?.value || '');
+  const minuteOptions = timeOptions
+    .filter((t) => t.value.startsWith(`${currentHour}:`))
+    .map((t) => { const mm = t.value.split(':')[1]; return { value: mm, label: mm }; });
+
+  const changeHour = (h) => {
+    const opts = timeOptions.filter((t) => t.value.startsWith(`${h}:`));
+    if (opts.length > 0) setPickupTime(opts[0].value);
+  };
+  const changeMinute = (m) => setPickupTime(`${currentHour}:${m}`);
 
   const openBookingModal = () => {
     if (!acceptingQueue) {
@@ -244,36 +268,30 @@ export default function QueueRequest() {
                 )}
               </ScrollView>
 
-              <Text style={styles.sectionLabel}>เลือกวันมารับ</Text>
-              <DateCalendarPicker
-                value={pickupDate}
-                onChange={changePickupDate}
-                minDate={DATE_OPTIONS[0].value}
-                maxDate={DATE_OPTIONS[DATE_OPTIONS.length - 1].value}
-              />
+              <Text style={styles.sectionLabel}>วันและเวลา</Text>
 
-              <Text style={styles.sectionLabel}>เลือกเวลามารับ</Text>
+              <View style={styles.selectRow}>
+                <SelectField options={dayOptions} value={pickupDate} onChange={changePickupDate} />
+                <SelectField options={MONTH_OPTIONS} value={pickupMonthKey} onChange={changeMonth} />
+              </View>
+
               {timeOptions.length > 0 ? (
-                <View style={styles.timeGrid}>
-                  {timeOptions.map((opt) => {
-                    const active = opt.value === pickupTime;
-                    return (
-                      <TouchableOpacity
-                        key={opt.value}
-                        style={[styles.timeChip, active && styles.timeChipActive]}
-                        onPress={() => setPickupTime(opt.value)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.timeChipText, active && styles.timeChipTextActive]}>{opt.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                <View style={[styles.selectRow, { marginTop: 8, alignItems: 'center' }]}>
+                  <SelectField options={hourOptions} value={currentHour} onChange={changeHour} />
+                  <Text style={styles.timeColon}>:</Text>
+                  <SelectField options={minuteOptions} value={pickupTime.split(':')[1] || ''} onChange={changeMinute} />
                 </View>
               ) : (
                 <View style={styles.timeEmptyBox}>
                   <Text style={styles.timeEmptyText}>ร้านปิดแล้วสำหรับวันนี้ เลือกวันอื่นได้เลย</Text>
                 </View>
               )}
+
+              {pickupTime ? (
+                <Text style={styles.selectedSummary}>
+                  เลือกแล้ว: {formatPickupDateLabel(pickupDate)} เวลา {pickupTime} น.
+                </Text>
+              ) : null}
 
               <View style={styles.bookingTotalRow}>
                 <Text style={styles.bookingTotalLabel}>ยอดรวม</Text>
@@ -551,14 +569,9 @@ const styles = StyleSheet.create({
   stepperBtnAdd: { backgroundColor: colors.primary },
   stepperQty: { fontFamily: fonts.bodyExtraBold, fontSize: 14, minWidth: 13, textAlign: 'center', color: colors.textDark },
   sectionLabel: { fontFamily: fonts.bodyExtraBold, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textMuted, marginTop: 18, marginBottom: 10 },
-  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  timeChip: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 12,
-    paddingVertical: 10, paddingHorizontal: 14, backgroundColor: '#fff',
-  },
-  timeChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  timeChipText: { fontFamily: fonts.bodySemiBold, fontSize: 13.5, color: colors.textDark },
-  timeChipTextActive: { color: '#fff', fontFamily: fonts.bodyExtraBold },
+  selectRow: { flexDirection: 'row', gap: 10 },
+  timeColon: { fontFamily: fonts.bodyExtraBold, fontSize: 18, color: colors.textDark },
+  selectedSummary: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, marginTop: 10 },
   timeEmptyBox: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 18, alignItems: 'center' },
   timeEmptyText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   bookingTotalRow: {
