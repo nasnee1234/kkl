@@ -1,7 +1,7 @@
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedPressable from './AnimatedPressable';
-import { colors } from '../theme/colors';
+import { colors, shadows } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
 // ป็อปอัพแจ้งเตือนแบบปุ่มเดียว — ค่าเริ่มต้นคือ "ร้านยังไม่พร้อมรับคิว"
@@ -33,11 +33,18 @@ export default function ClosedPopup({
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(32,30,29,0.55)', alignItems: 'center', justifyContent: 'center', padding: 26 },
-  box: { backgroundColor: colors.cream, borderRadius: 28, padding: 26, alignItems: 'center', width: '100%', maxWidth: 340 },
-  iconCircle: { width: 76, height: 76, borderRadius: 38, backgroundColor: colors.creamSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  overlay: { flex: 1, backgroundColor: 'rgba(26,24,21,0.6)', alignItems: 'center', justifyContent: 'center', padding: 26 },
+  box: {
+    backgroundColor: colors.card, borderRadius: 28, padding: 28, alignItems: 'center',
+    width: '100%', maxWidth: 340, borderWidth: 1, borderColor: colors.border, ...shadows.lg,
+  },
+  iconCircle: { width: 76, height: 76, borderRadius: 38, backgroundColor: colors.creamSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
   title: { fontFamily: fonts.heading, fontSize: 24, color: colors.textDark, textAlign: 'center' },
-  message: { fontFamily: fonts.bodySemiBold, fontSize: 16, color: colors.textMuted, marginTop: 8, textAlign: 'center', lineHeight: 22 },
-  ackBtn: { marginTop: 22, width: '100%', backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 18, alignItems: 'center' },
+  message: { fontFamily: fonts.bodySemiBold, fontSize: 15.5, color: colors.textMuted, marginTop: 10, textAlign: 'center', lineHeight: 23 },
+  ackBtn: {
+    marginTop: 26, alignSelf: 'stretch', backgroundColor: colors.primary, borderRadius: 999,
+    paddingVertical: 18, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center',
+    ...shadows.md,
+  },
   ackText: { fontFamily: fonts.heading, fontSize: 18, color: '#fff' },
 });
