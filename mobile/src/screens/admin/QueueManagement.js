@@ -362,7 +362,7 @@ export default function QueueManagement() {
             <Ionicons name={scheduledExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={adminTheme.textMuted} />
           </TouchableOpacity>
           {scheduledExpanded && (
-            <View style={styles.scheduledList}>
+            <ScrollView style={styles.scheduledList} nestedScrollEnabled>
               {[...scheduledQueues]
                 .sort((a, b) => (a.pickupDate + a.pickupTime).localeCompare(b.pickupDate + b.pickupTime))
                 .map((item) => (
@@ -386,7 +386,7 @@ export default function QueueManagement() {
                     </TouchableOpacity>
                   </View>
                 ))}
-            </View>
+            </ScrollView>
           )}
         </View>
       )}
@@ -416,6 +416,7 @@ export default function QueueManagement() {
 
       {/* Queue List */}
       <FlatList
+        style={styles.listBounds}
         data={filtered}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
@@ -634,10 +635,10 @@ const styles = StyleSheet.create({
   },
   scheduledHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14 },
   scheduledHeaderText: { flex: 1, color: adminTheme.text, fontSize: 14, fontWeight: '700' },
-  scheduledList: { paddingHorizontal: 14, paddingBottom: 12, gap: 10 },
+  scheduledList: { maxHeight: 220, paddingHorizontal: 14, paddingBottom: 12 },
   scheduledRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: adminTheme.surfaceAlt, borderRadius: 12, padding: 12,
+    backgroundColor: adminTheme.surfaceAlt, borderRadius: 12, padding: 12, marginBottom: 10,
   },
   scheduledDate: { color: adminTheme.accent, fontSize: 13, fontWeight: '800' },
   scheduledName: { color: adminTheme.text, fontSize: 14, fontWeight: '600', marginTop: 2 },
@@ -651,6 +652,7 @@ const styles = StyleSheet.create({
   filterBtnActive: { backgroundColor: adminTheme.accent },
   filterText: { fontSize: 13, color: adminTheme.textMuted, fontWeight: '500' },
   filterTextActive: { color: '#fff' },
+  listBounds: { flex: 1 },
   list: { paddingHorizontal: 16, paddingBottom: 24 },
   empty: { textAlign: 'center', color: adminTheme.textMuted, fontSize: 15, marginTop: 60 },
   card: { backgroundColor: adminTheme.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: adminTheme.border, gap: 12 },
