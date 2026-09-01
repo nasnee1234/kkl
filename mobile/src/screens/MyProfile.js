@@ -41,8 +41,6 @@ export default function MyProfile() {
   ];
 
   const rows = [
-    { icon: 'receipt-outline', label: 'ประวัติการสั่ง' },
-    { icon: 'heart-outline', label: 'เมนูที่ชอบ' },
     { icon: 'help-circle-outline', label: 'ช่วยเหลือ / ติดต่อร้าน' },
   ];
 
