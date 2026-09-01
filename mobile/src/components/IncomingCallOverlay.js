@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, Modal, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedPressable from './AnimatedPressable';
-import { colors } from '../theme/colors';
+import { colors, shadows } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { formatQueueLabel } from '../utils/queueNumbers';
 
@@ -87,10 +87,11 @@ const styles = StyleSheet.create({
   numberText: { fontFamily: fonts.heading, color: colors.cream, fontSize: 76, lineHeight: 82, marginVertical: 4 },
   sub: { fontFamily: fonts.bodySemiBold, color: colors.cream, opacity: 0.95, fontSize: 15, maxWidth: 260, textAlign: 'center', lineHeight: 21 },
   ackBtn: {
-    marginTop: 28, width: '100%', maxWidth: 280, borderRadius: 999,
-    paddingVertical: 17, backgroundColor: colors.cream, alignItems: 'center',
+    marginTop: 30, width: '100%', maxWidth: 300, borderRadius: 999,
+    paddingVertical: 19, paddingHorizontal: 24, backgroundColor: colors.card,
+    alignItems: 'center', justifyContent: 'center', ...shadows.lg,
   },
-  ackText: { fontFamily: fonts.heading, color: colors.primaryDeep, fontSize: 16 },
-  snoozeBtn: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999 },
-  snoozeText: { fontFamily: fonts.bodyBold, color: colors.cream, fontSize: 13.5 },
+  ackText: { fontFamily: fonts.heading, color: colors.primaryDeep, fontSize: 18 },
+  snoozeBtn: { marginTop: 14, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 999 },
+  snoozeText: { fontFamily: fonts.bodyBold, color: colors.cream, fontSize: 14 },
 });

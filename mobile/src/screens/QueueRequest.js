@@ -517,7 +517,12 @@ export default function QueueRequest() {
         </View>
       </Modal>
 
-      <IncomingCallOverlay visible={callAlert} queueNumber={myQueue.number} onDismiss={dismissCallAlert} />
+      <IncomingCallOverlay
+        visible={callAlert}
+        queueNumber={myQueue.number}
+        onDismiss={dismissCallAlert}
+        onSnooze={dismissCallAlert}
+      />
     </PatternBackground>
   );
 }
