@@ -138,7 +138,7 @@ export default function QueueRequest() {
       } else {
         const queue = await createScheduledQueue(baseData);
         addScheduledQueue({ id: queue.id, number: null, status: 'scheduled', ...baseData });
-        showToast(`จองคิวล่วงหน้าแล้ว! วันที่ ${formatPickupDateLabel(pickupDate)}`);
+        showToast(`สั่งออเดอร์ล่วงหน้าแล้ว! วันที่ ${formatPickupDateLabel(pickupDate)}`);
       }
       setBookingModalVisible(false);
     } catch (e) {
@@ -146,7 +146,7 @@ export default function QueueRequest() {
         setBookingModalVisible(false);
         setQueueFullMessage(e.message);
       } else {
-        Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถจองคิวได้ กรุณาลองใหม่');
+        Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกได้ กรุณาลองใหม่');
       }
     } finally {
       setBookingSaving(false);
@@ -202,7 +202,7 @@ export default function QueueRequest() {
       // เน็ตหลุดหรือสิทธิ์ไม่พอ — ยังเคลียร์ฝั่งเราไว้ก่อน แอดมินเห็นสถานะเดิมได้จาก Firestore
     }
     removeScheduledQueue(id);
-    showToast('ยกเลิกการจองแล้ว');
+    showToast('ยกเลิกออเดอร์ล่วงหน้าแล้ว');
   };
 
   // ── ไม่มีคิวอยู่: ปุ่มรับคิวด่วน + ทางเลือกสั่งอาหารพร้อมจอง ──
@@ -239,12 +239,12 @@ export default function QueueRequest() {
           </View>
 
           <TouchableOpacity style={styles.secondaryBtn} onPress={openBookingModal} activeOpacity={0.85}>
-            <Text style={styles.secondaryBtnText}>จองคิวล่วงหน้า เลือกเวลา + เมนู</Text>
+            <Text style={styles.secondaryBtnText}>สั่งออเดอร์ล่วงหน้า เลือกเวลา + เมนู</Text>
           </TouchableOpacity>
 
           {myScheduledQueues.length > 0 && (
             <View style={styles.scheduledListWrap}>
-              <Text style={styles.sectionLabel}>คิวที่จองไว้ล่วงหน้า</Text>
+              <Text style={styles.sectionLabel}>ออเดอร์ที่สั่งล่วงหน้าไว้</Text>
               {myScheduledQueues.map((sq) => (
                 <View key={sq.id} style={styles.scheduledItemCard}>
                   <View style={styles.scheduledItemHeader}>
@@ -260,7 +260,7 @@ export default function QueueRequest() {
                     </View>
                   ))}
                   <TouchableOpacity onPress={() => handleCancelScheduled(sq.id)}>
-                    <Text style={styles.scheduledCancelText}>ยกเลิกการจองนี้</Text>
+                    <Text style={styles.scheduledCancelText}>ยกเลิกออเดอร์นี้</Text>
                   </TouchableOpacity>
                 </View>
               ))}
@@ -280,7 +280,7 @@ export default function QueueRequest() {
         <Modal visible={bookingModalVisible} transparent animationType="slide">
           <View style={styles.overlay}>
             <View style={styles.bookingBox}>
-              <Text style={styles.modalTitle}>จองคิวล่วงหน้า + เลือกเมนู</Text>
+              <Text style={styles.modalTitle}>สั่งออเดอร์ล่วงหน้า + เลือกเมนู</Text>
 
               <ScrollView style={styles.bookingList} keyboardShouldPersistTaps="handled">
                 {menus.length === 0 ? (
@@ -345,7 +345,7 @@ export default function QueueRequest() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text style={styles.saveBtnText}>
-                    {selectedItems.length === 0 ? 'เลือกอย่างน้อย 1 เมนู' : 'ยืนยันจองคิว'}
+                    {selectedItems.length === 0 ? 'เลือกอย่างน้อย 1 เมนู' : 'ยืนยันสั่งออเดอร์'}
                   </Text>
                 )}
               </AnimatedPressable>
