@@ -43,6 +43,7 @@ export default function QueueManagement() {
   const [scheduledQueues, setScheduledQueues] = useState([]);
   const [scheduledExpanded, setScheduledExpanded] = useState(true);
   const [cancelScheduledTarget, setCancelScheduledTarget] = useState(null);
+  const [forceDoneTarget, setForceDoneTarget] = useState(null);
   const queuesRef = useRef(queues);
   queuesRef.current = queues;
 
@@ -179,7 +180,8 @@ export default function QueueManagement() {
     await updateDoc(
       doc(db, 'queues', item.id),
       newStatus === 'calling'
-        ? { status: newStatus, callingAt: serverTimestamp() }
+        // เรียกใหม่ทุกครั้งต้องล้างคำตอบรอบก่อนด้วย ไม่งั้นคิวที่เคยกด "กำลังไปรับ" รอบที่แล้วจะข้ามขั้นตอนยืนยัน
+        ? { status: newStatus, callingAt: serverTimestamp(), onTheWay: false, onTheWayAt: null, snoozedAt: null }
         : { status: newStatus }
     );
 
@@ -292,6 +294,8 @@ export default function QueueManagement() {
     const time = item.createdAt?.toDate
       ? item.createdAt.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
       : '--:--';
+    // เรียกแล้วแต่ลูกค้ายังไม่กด "กำลังไปรับแล้ว" (หรือกดขอเวลาเพิ่ม) — ยังปิดคิว/ใส่ยอดขายไม่ได้
+    const awaitingCustomer = item.status === 'calling' && !item.onTheWay;
     return (
       <View key={item.id} style={styles.card}>
         <View style={[styles.numBadge, { backgroundColor: cfg.bg }]}>
@@ -313,17 +317,32 @@ export default function QueueManagement() {
               <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
             </View>
           </View>
+          {item.status === 'calling' && (
+            <Text style={[styles.customerReply, item.onTheWay && styles.customerReplyOk]}>
+              {item.onTheWay
+                ? '✓ ลูกค้ากดกำลังไปรับแล้ว'
+                : item.snoozedAt
+                  ? '⏳ ลูกค้าขอเวลาอีก 5 นาที'
+                  : '• รอลูกค้ากดยืนยัน'}
+            </Text>
+          )}
         </View>
         <View style={styles.actions}>
-          {item.status === 'waiting' && (
+          {(item.status === 'waiting' || awaitingCustomer) && (
             <TouchableOpacity style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.calling.bg }]}
               onPress={() => handleChangeStatus(item, 'calling')}>
               <Ionicons name="megaphone-outline" size={16} color={ADMIN_STATUS_THEME.calling.color} />
             </TouchableOpacity>
           )}
           {item.status === 'calling' && (
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.done.bg }]}
-              onPress={() => handleChangeStatus(item, 'done')}>
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                { backgroundColor: ADMIN_STATUS_THEME.done.bg },
+                awaitingCustomer && styles.actionBtnMuted,
+              ]}
+              onPress={() => (awaitingCustomer ? setForceDoneTarget(item) : handleChangeStatus(item, 'done'))}
+            >
               <Ionicons name="checkmark-outline" size={16} color={ADMIN_STATUS_THEME.done.color} />
             </TouchableOpacity>
           )}
@@ -580,6 +599,25 @@ export default function QueueManagement() {
         onConfirm={performResetDay}
       />
 
+      {/* ปิดคิวทั้งที่ลูกค้ายังไม่กดยืนยัน — เผื่อลูกค้าเดินมารับเองโดยไม่ได้กดในแอป */}
+      <ConfirmDialog
+        visible={!!forceDoneTarget}
+        icon="alert-circle-outline"
+        title="ลูกค้ายังไม่กดยืนยัน"
+        message={
+          forceDoneTarget
+            ? `คิว #${forceDoneTarget.number} ยังไม่ได้กด "กำลังไปรับแล้ว" ในแอป\nถ้าลูกค้ามารับที่ร้านแล้ว กดยืนยันเพื่อบันทึกยอดขายต่อได้เลย`
+            : ''
+        }
+        confirmLabel="ลูกค้ามารับแล้ว"
+        onCancel={() => setForceDoneTarget(null)}
+        onConfirm={() => {
+          const target = forceDoneTarget;
+          setForceDoneTarget(null);
+          handleChangeStatus(target, 'done');
+        }}
+      />
+
       {/* Delete Queue Confirm */}
       <ConfirmDialog
         visible={!!deleteTarget}
@@ -689,8 +727,11 @@ const styles = StyleSheet.create({
   timeText: { fontSize: 12, color: adminTheme.textMuted, marginRight: 4 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   statusText: { fontSize: 11, fontWeight: '600' },
+  customerReply: { fontSize: 11.5, color: adminTheme.textMuted, marginTop: 6, fontWeight: '600' },
+  customerReplyOk: { color: adminTheme.cta },
   actions: { flexDirection: 'row', gap: 6 },
   actionBtn: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  actionBtnMuted: { opacity: 0.35 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalBox: {
     backgroundColor: adminTheme.surface, borderRadius: 24, padding: 24, maxHeight: '90%',

@@ -22,11 +22,20 @@ service cloud.firestore {
     match /queues/{queueId} {
       allow read: if true;
       allow create: if true;
-      allow update: if isAdmin() || (
-        resource.data.status in ['waiting', 'scheduled', 'ready'] &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
-        request.resource.data.status == 'cancelled'
-      );
+      allow update: if isAdmin()
+        // ลูกค้ายกเลิกคิว/ออเดอร์ของตัวเอง (แก้ได้แค่ field status เป็น 'cancelled')
+        || (
+          resource.data.status in ['waiting', 'scheduled', 'ready'] &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+          request.resource.data.status == 'cancelled'
+        )
+        // ตอบกลับตอนถูกเรียกคิว: "กำลังไปรับแล้ว" / "ขออีก 5 นาที" — ห้ามแตะ status หรือยอดเงิน
+        || (
+          resource.data.status == 'calling' &&
+          request.resource.data.status == 'calling' &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['onTheWay', 'onTheWayAt', 'snoozedAt'])
+        );
       allow delete: if isAdmin();
     }
 

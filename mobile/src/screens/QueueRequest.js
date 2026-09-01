@@ -187,6 +187,28 @@ export default function QueueRequest() {
     showToast('ยกเลิกคิวแล้ว มาใหม่ได้ตลอดจ๊ะ');
   };
 
+  // ลูกค้ากด "กำลังไปรับแล้ว" — บอกร้านว่ากำลังเดินมาจริง ร้านถึงจะปิดคิว/ใส่ยอดขายได้
+  const handleOnTheWay = async () => {
+    dismissCallAlert();
+    if (!myQueue?.id) return;
+    try {
+      await updateDoc(doc(db, 'queues', myQueue.id), { onTheWay: true, onTheWayAt: serverTimestamp() });
+    } catch (e) {
+      // เน็ตหลุด — ฝั่งลูกค้าปิดหน้าเรียกไปแล้ว ร้านยังเห็นเป็น "รอลูกค้ายืนยัน" ตามเดิม
+    }
+  };
+
+  // ลูกค้ากด "ขออีก 5 นาที" — แค่บอกร้านว่าขอเวลาเพิ่ม ยังไม่ถือว่ากำลังมา ร้านยังปิดคิวไม่ได้
+  const handleSnooze = async () => {
+    dismissCallAlert();
+    if (!myQueue?.id) return;
+    try {
+      await updateDoc(doc(db, 'queues', myQueue.id), { snoozedAt: serverTimestamp() });
+    } catch (e) {
+      // เงียบไว้ — ไม่ให้ป็อปอัพเด้ง error ทับหน้าเรียกคิว
+    }
+  };
+
   const handleCancelScheduled = async (id) => {
     try {
       await updateDoc(doc(db, 'queues', id), { status: 'cancelled' });
@@ -459,8 +481,8 @@ export default function QueueRequest() {
         <IncomingCallOverlay
           visible={callAlert}
           queueNumber={myQueue.number}
-          onDismiss={dismissCallAlert}
-          onSnooze={dismissCallAlert}
+          onDismiss={handleOnTheWay}
+          onSnooze={handleSnooze}
         />
       </PatternBackground>
     );
@@ -520,8 +542,8 @@ export default function QueueRequest() {
       <IncomingCallOverlay
         visible={callAlert}
         queueNumber={myQueue.number}
-        onDismiss={dismissCallAlert}
-        onSnooze={dismissCallAlert}
+        onDismiss={handleOnTheWay}
+        onSnooze={handleSnooze}
       />
     </PatternBackground>
   );
