@@ -151,9 +151,10 @@ export default function QueueManagement() {
   const doneToday = activeQueues.filter((q) => q.status === 'done' && isToday(q.doneAt));
 
   const stats = {
-    waiting:  activeQueues.filter((q) => q.status === 'waiting').length,
-    calling:  activeQueues.filter((q) => q.status === 'calling').length,
-    done:     activeQueues.filter((q) => q.status === 'done').length,
+    waiting:   activeQueues.filter((q) => q.status === 'waiting').length,
+    calling:   activeQueues.filter((q) => q.status === 'calling').length,
+    done:      activeQueues.filter((q) => q.status === 'done').length,
+    cancelled: activeQueues.filter((q) => q.status === 'cancelled').length,
     ordersToday: doneToday.length,
     revenueToday: doneToday.reduce((sum, q) => sum + (q.saleAmount || 0), 0),
   };
@@ -291,10 +292,11 @@ export default function QueueManagement() {
   };
 
   const FILTERS = [
-    { key: 'all',     label: `ทั้งหมด (${activeQueues.length})` },
-    { key: 'waiting', label: `รอ (${stats.waiting})` },
-    { key: 'calling', label: `เรียก (${stats.calling})` },
-    { key: 'done',    label: `เสร็จ (${stats.done})` },
+    { key: 'all',       label: `ทั้งหมด (${activeQueues.length})` },
+    { key: 'waiting',   label: `รอ (${stats.waiting})` },
+    { key: 'calling',   label: `เรียก (${stats.calling})` },
+    { key: 'done',      label: `เสร็จ (${stats.done})` },
+    { key: 'cancelled', label: `ยกเลิก (${stats.cancelled})` },
   ];
 
   if (loading) {
