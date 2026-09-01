@@ -27,6 +27,7 @@ export function QueueProvider({ children }) {
   const [vibrateEnabled, setVibrateEnabled] = useState(true);
   const [preAlertEnabled, setPreAlertEnabled] = useState(true);
   const prevStatusRef = useRef(null);
+  const lastCallingAtRef = useRef(null); // เวลาที่ "เรียก" ครั้งล่าสุดที่เด้งแจ้งเตือนไปแล้ว กันเด้งซ้ำจาก snapshot เดิม
   const preWarnedRef = useRef(false); // กันยิงเตือนล่วงหน้าซ้ำระหว่างที่ยังห่างกัน 2 คิวอยู่
 
   const pushNotification = (message) => {
@@ -116,7 +117,14 @@ export function QueueProvider({ children }) {
           doneAt: data.doneAt ?? prev?.doneAt ?? null,
         }));
 
-        if (prevStatusRef.current !== 'calling' && newStatus === 'calling') {
+        // ดูจากเวลาที่ร้านกดเรียก ไม่ใช่แค่การเปลี่ยนสถานะ — เรียกซ้ำสถานะยังเป็น 'calling' เหมือนเดิม
+        // ถ้าเช็คแค่ prevStatus จะไม่มีอะไรเด้งขึ้นเลยตอนร้านกดเรียกรอบสอง
+        const callingAtMs = data.callingAt?.toMillis ? data.callingAt.toMillis() : null;
+        const isNewCall =
+          newStatus === 'calling' && callingAtMs != null && callingAtMs !== lastCallingAtRef.current;
+
+        if (isNewCall) {
+          lastCallingAtRef.current = callingAtMs;
           vibrate([0, 400, 150, 400, 150, 400]);
           speak(`ถึงคิวของคุณแล้ว หมายเลข ${data.number} กรุณามาที่เคาน์เตอร์`);
           setPreWarning(false);
@@ -204,6 +212,7 @@ export function QueueProvider({ children }) {
   const takeQueue = (queue) => {
     prevStatusRef.current = queue.status || 'waiting';
     preWarnedRef.current = false;
+    lastCallingAtRef.current = null;
     setCallAlert(false);
     setPreWarning(false);
     setMyQueue({ status: 'waiting', ...queue });
@@ -212,6 +221,7 @@ export function QueueProvider({ children }) {
   const clearQueue = () => {
     prevStatusRef.current = null;
     preWarnedRef.current = false;
+    lastCallingAtRef.current = null;
     setCallAlert(false);
     setPreWarning(false);
     setMyQueue(null);
