@@ -56,17 +56,25 @@ export function buildPickupDate(month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-// ตัวเลือกเวลา — ทุกนาทีตลอด 24 ชม. ไม่จำกัดแค่เวลาเปิดร้าน ถ้าเป็นวันนี้จะตัดเวลาที่ผ่านไปแล้วออก
+// ร้านเปิด 9:00–17:00 (ต้องตรงกับที่แสดงในหน้าแรก)
+export const SHOP_OPEN_HOUR = 9;
+export const SHOP_CLOSE_HOUR = 17;
+
+// จองวันนี้ต้องเผื่อเวลาร้านเตรียมของอย่างน้อย 30 นาทีจากตอนนี้
+const MIN_LEAD_MINUTES = 30;
+
+// ตัวเลือกเวลา — เฉพาะช่วงเวลาเปิดร้าน ถ้าเป็นวันนี้จะตัดเวลาที่ใกล้กว่า 30 นาทีจากตอนนี้ออก
 export function getTimeOptions(dateStr) {
   const options = [];
   const isToday = dateStr === toLocalDateStr();
   const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const cutoffMinutes = now.getHours() * 60 + now.getMinutes() + MIN_LEAD_MINUTES;
 
-  for (let h = 0; h < 24; h++) {
+  for (let h = SHOP_OPEN_HOUR; h <= SHOP_CLOSE_HOUR; h++) {
     for (let m = 0; m < 60; m++) {
+      if (h === SHOP_CLOSE_HOUR && m > 0) break;
       const totalMinutes = h * 60 + m;
-      if (isToday && totalMinutes <= nowMinutes) continue;
+      if (isToday && totalMinutes < cutoffMinutes) continue;
       const value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
       options.push({ value, label: value + ' น.' });
     }
