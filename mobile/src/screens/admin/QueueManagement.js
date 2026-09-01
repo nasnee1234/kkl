@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
-  Modal, TextInput, Alert, ScrollView, ActivityIndicator,
+  View, Text, TouchableOpacity, StyleSheet,
+  Modal, TextInput, Alert, ScrollView, ActivityIndicator, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -303,8 +303,64 @@ export default function QueueManagement() {
     return <View style={styles.center}><ActivityIndicator size="large" color={adminTheme.accent} /></View>;
   }
 
+  const renderCard = (item) => {
+    const cfg = ADMIN_STATUS_THEME[item.status] || ADMIN_STATUS_THEME.waiting;
+    const time = item.createdAt?.toDate
+      ? item.createdAt.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+      : '--:--';
+    return (
+      <View key={item.id} style={styles.card}>
+        <View style={[styles.numBadge, { backgroundColor: cfg.bg }]}>
+          <Text style={[styles.numText, { color: cfg.color }]}>{item.number}</Text>
+        </View>
+        <View style={styles.info}>
+          <Text style={styles.name}>{item.customerName}</Text>
+          {item.items?.length > 0 && (
+            <Text style={styles.orderItems} numberOfLines={2}>
+              {item.items.map((i) => `${i.name} x${i.qty}`).join(', ')}
+            </Text>
+          )}
+          {item.phone ? <Text style={styles.phoneText}>โทร {item.phone}</Text> : null}
+          <View style={styles.meta}>
+            <Ionicons name="time-outline" size={12} color={adminTheme.textMuted} />
+            <Text style={styles.timeText}>{time}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
+              <Ionicons name={cfg.icon} size={11} color={cfg.color} />
+              <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.actions}>
+          {item.status === 'waiting' && (
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.calling.bg }]}
+              onPress={() => handleChangeStatus(item, 'calling')}>
+              <Ionicons name="megaphone-outline" size={16} color={ADMIN_STATUS_THEME.calling.color} />
+            </TouchableOpacity>
+          )}
+          {item.status === 'calling' && (
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.done.bg }]}
+              onPress={() => handleChangeStatus(item, 'done')}>
+              <Ionicons name="checkmark-outline" size={16} color={ADMIN_STATUS_THEME.done.color} />
+            </TouchableOpacity>
+          )}
+          {(item.status === 'waiting' || item.status === 'calling') && (
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.cancelled.bg }]}
+              onPress={() => handleChangeStatus(item, 'cancelled')}>
+              <Ionicons name="close-outline" size={16} color={ADMIN_STATUS_THEME.cancelled.color} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: adminTheme.surfaceAlt }]}
+            onPress={() => handleDelete(item)}>
+            <Ionicons name="trash-outline" size={16} color={adminTheme.textMuted} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
+      <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scrollContent}>
       {/* เปิด/ปิดรับคิว */}
       <View style={styles.acceptRow}>
         <View>
@@ -391,91 +447,38 @@ export default function QueueManagement() {
         </View>
       )}
 
-      {/* Realtime badge */}
-      <View style={styles.realtimeBadge}>
-        <View style={styles.dot} />
-        <Text style={styles.realtimeText}>อัปเดต Realtime</Text>
+      {/* Realtime badge + Filter — ลอยติดด้านบนเสมอตอนเลื่อนดูคิว (เฉพาะเว็บ) */}
+      <View style={styles.stickyFilterBar}>
+        <View style={styles.realtimeBadge}>
+          <View style={styles.dot} />
+          <Text style={styles.realtimeText}>อัปเดต Realtime</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+          <View style={styles.filters}>
+            {FILTERS.map((f) => (
+              <TouchableOpacity
+                key={f.key}
+                style={[styles.filterBtn, filter === f.key && styles.filterBtnActive]}
+                onPress={() => setFilter(f.key)}
+              >
+                <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
       </View>
 
-      {/* Filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-        <View style={styles.filters}>
-          {FILTERS.map((f) => (
-            <TouchableOpacity
-              key={f.key}
-              style={[styles.filterBtn, filter === f.key && styles.filterBtnActive]}
-              onPress={() => setFilter(f.key)}
-            >
-              <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-
       {/* Queue List */}
-      <FlatList
-        style={styles.listBounds}
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>ไม่มีคิวในขณะนี้</Text>}
-        renderItem={({ item }) => {
-          const cfg = ADMIN_STATUS_THEME[item.status] || ADMIN_STATUS_THEME.waiting;
-          const time = item.createdAt?.toDate
-            ? item.createdAt.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-            : '--:--';
-          return (
-            <View style={styles.card}>
-              <View style={[styles.numBadge, { backgroundColor: cfg.bg }]}>
-                <Text style={[styles.numText, { color: cfg.color }]}>{item.number}</Text>
-              </View>
-              <View style={styles.info}>
-                <Text style={styles.name}>{item.customerName}</Text>
-                {item.items?.length > 0 && (
-                  <Text style={styles.orderItems} numberOfLines={2}>
-                    {item.items.map((i) => `${i.name} x${i.qty}`).join(', ')}
-                  </Text>
-                )}
-                {item.phone ? <Text style={styles.phoneText}>โทร {item.phone}</Text> : null}
-                <View style={styles.meta}>
-                  <Ionicons name="time-outline" size={12} color={adminTheme.textMuted} />
-                  <Text style={styles.timeText}>{time}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
-                    <Ionicons name={cfg.icon} size={11} color={cfg.color} />
-                    <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.actions}>
-                {item.status === 'waiting' && (
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.calling.bg }]}
-                    onPress={() => handleChangeStatus(item, 'calling')}>
-                    <Ionicons name="megaphone-outline" size={16} color={ADMIN_STATUS_THEME.calling.color} />
-                  </TouchableOpacity>
-                )}
-                {item.status === 'calling' && (
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.done.bg }]}
-                    onPress={() => handleChangeStatus(item, 'done')}>
-                    <Ionicons name="checkmark-outline" size={16} color={ADMIN_STATUS_THEME.done.color} />
-                  </TouchableOpacity>
-                )}
-                {(item.status === 'waiting' || item.status === 'calling') && (
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.cancelled.bg }]}
-                    onPress={() => handleChangeStatus(item, 'cancelled')}>
-                    <Ionicons name="close-outline" size={16} color={ADMIN_STATUS_THEME.cancelled.color} />
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: adminTheme.surfaceAlt }]}
-                  onPress={() => handleDelete(item)}>
-                  <Ionicons name="trash-outline" size={16} color={adminTheme.textMuted} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
-      />
+      <View style={styles.list}>
+        {filtered.length === 0 ? (
+          <Text style={styles.empty}>ไม่มีคิวในขณะนี้</Text>
+        ) : (
+          filtered.map(renderCard)
+        )}
+      </View>
+      </ScrollView>
 
       {/* Add Queue Modal */}
       <Modal visible={addOpen} transparent animationType="slide">
@@ -643,6 +646,16 @@ const styles = StyleSheet.create({
   scheduledDate: { color: adminTheme.accent, fontSize: 13, fontWeight: '800' },
   scheduledName: { color: adminTheme.text, fontSize: 14, fontWeight: '600', marginTop: 2 },
   scheduledItems: { color: adminTheme.textMuted, fontSize: 12, marginTop: 3, lineHeight: 16 },
+  scrollFlex: { flex: 1 },
+  scrollContent: { paddingBottom: 24 },
+  stickyFilterBar: {
+    backgroundColor: adminTheme.bg,
+    paddingTop: 10,
+    ...Platform.select({
+      web: { position: 'sticky', top: 0, zIndex: 10 },
+      default: {},
+    }),
+  },
   realtimeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 4 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: adminTheme.cta },
   realtimeText: { fontSize: 12, color: adminTheme.cta, fontWeight: '600' },
@@ -652,8 +665,7 @@ const styles = StyleSheet.create({
   filterBtnActive: { backgroundColor: adminTheme.accent },
   filterText: { fontSize: 13, color: adminTheme.textMuted, fontWeight: '500' },
   filterTextActive: { color: '#fff' },
-  listBounds: { flex: 1 },
-  list: { paddingHorizontal: 16, paddingBottom: 24 },
+  list: { paddingHorizontal: 16, paddingTop: 8 },
   empty: { textAlign: 'center', color: adminTheme.textMuted, fontSize: 15, marginTop: 60 },
   card: { backgroundColor: adminTheme.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: adminTheme.border, gap: 12 },
   numBadge: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
