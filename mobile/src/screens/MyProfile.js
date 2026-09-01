@@ -7,7 +7,6 @@ import {
   Modal,
   TextInput,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -25,13 +24,6 @@ export default function MyProfile() {
   const handleSave = () => {
     setUser((prev) => ({ ...prev, phone }));
     setEditOpen(false);
-  };
-
-  const handleLogout = () => {
-    Alert.alert('ออกจากระบบ', 'คุณต้องการออกจากระบบหรือไม่?', [
-      { text: 'ยกเลิก', style: 'cancel' },
-      { text: 'ออกจากระบบ', style: 'destructive', onPress: () => {} },
-    ]);
   };
 
   const toggles = [
@@ -99,11 +91,6 @@ export default function MyProfile() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={19} color={colors.primaryDeep} />
-        <Text style={styles.logoutText}>ออกจากระบบ</Text>
-      </TouchableOpacity>
-
       <Modal visible={editOpen} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -151,12 +138,6 @@ const styles = StyleSheet.create({
   switchThumbOn: { transform: [{ translateX: 20 }] },
   navRow: { flexDirection: 'row', alignItems: 'center', gap: 13, padding: 16 },
   navRowLabel: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 14.5, color: colors.textDark },
-
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    marginTop: 16, padding: 16,
-  },
-  logoutText: { fontFamily: fonts.bodyExtraBold, fontSize: 15, color: colors.primaryDeep },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(32,30,29,0.5)', justifyContent: 'flex-end' },
   modalBox: { backgroundColor: colors.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24 },
