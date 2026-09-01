@@ -57,8 +57,8 @@ export async function registerForPushNotifications() {
   }
 }
 
-// ส่ง push notification ผ่าน Expo Push API (เรียกจาก admin)
-export async function sendPushNotification(expoPushToken, queueNumber) {
+// ส่ง push notification ผ่าน Expo Push API (เรียกจาก admin) — ไม่ใส่ title/body จะใช้ข้อความเรียกคิวแบบเดิม
+export async function sendPushNotification(expoPushToken, queueNumber, title, body) {
   if (!expoPushToken) return;
 
   try {
@@ -71,8 +71,8 @@ export async function sendPushNotification(expoPushToken, queueNumber) {
       body: JSON.stringify({
         to: expoPushToken,
         channelId: 'queue',
-        title: '🔔 ถึงคิวของคุณแล้ว!',
-        body: `คิวหมายเลข ${queueNumber} — กรุณามาที่เคาน์เตอร์`,
+        title: title || '🔔 ถึงคิวของคุณแล้ว!',
+        body: body || `คิวหมายเลข ${queueNumber} — กรุณามาที่เคาน์เตอร์`,
         sound: 'default',
         priority: 'high',
         data: { queueNumber },

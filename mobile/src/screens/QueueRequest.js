@@ -118,7 +118,6 @@ export default function QueueRequest() {
   const handleBookingConfirm = async () => {
     if (bookingSaving || selectedItems.length === 0 || !pickupTime) return;
     setBookingSaving(true);
-    const isToday = pickupDate === toLocalDateStr();
     try {
       const { pushToken, webPushSubscription } = await registerForPushNotifications();
       const baseData = {
@@ -131,23 +130,13 @@ export default function QueueRequest() {
         webPushSubscription: webPushSubscription || null,
       };
 
-      if (isToday) {
-        const queue = await createQueueWithNumber({ ...baseData, status: 'waiting', createdAt: serverTimestamp() });
-        takeQueue({ id: queue.id, number: queue.number, status: 'waiting', ...baseData });
-        showToast(`จองคิวแล้ว! คิวของคุณคือ ${formatQueueLabel(queue.number)}`);
-      } else {
-        const queue = await createScheduledQueue(baseData);
-        addScheduledQueue({ id: queue.id, number: null, status: 'scheduled', ...baseData });
-        showToast(`สั่งออเดอร์ล่วงหน้าแล้ว! วันที่ ${formatPickupDateLabel(pickupDate)}`);
-      }
+      // สั่งออเดอร์ล่วงหน้า — ไม่ได้เลขคิว รอทางร้านเตรียมแล้วแจ้งมารับ (ไม่ว่าจะเลือกวันไหนก็ตาม รวมถึงวันนี้)
+      const queue = await createScheduledQueue(baseData);
+      addScheduledQueue({ id: queue.id, number: null, status: 'scheduled', ...baseData });
+      showToast(`สั่งออเดอร์ล่วงหน้าแล้ว! วันที่ ${formatPickupDateLabel(pickupDate)}`);
       setBookingModalVisible(false);
     } catch (e) {
-      if (e.code === 'QUEUE_FULL') {
-        setBookingModalVisible(false);
-        setQueueFullMessage(e.message);
-      } else {
-        Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกได้ กรุณาลองใหม่');
-      }
+      Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกได้ กรุณาลองใหม่');
     } finally {
       setBookingSaving(false);
     }
@@ -245,25 +234,35 @@ export default function QueueRequest() {
           {myScheduledQueues.length > 0 && (
             <View style={styles.scheduledListWrap}>
               <Text style={styles.sectionLabel}>ออเดอร์ที่สั่งล่วงหน้าไว้</Text>
-              {myScheduledQueues.map((sq) => (
-                <View key={sq.id} style={styles.scheduledItemCard}>
-                  <View style={styles.scheduledItemHeader}>
-                    <Ionicons name="calendar-outline" size={18} color={colors.primaryDeep} />
-                    <Text style={styles.scheduledItemDate}>
-                      {formatPickupDateLabel(sq.pickupDate)} · {sq.pickupTime} น.
-                    </Text>
-                  </View>
-                  {sq.items?.map((i, idx) => (
-                    <View key={idx} style={styles.orderLine}>
-                      <Text style={styles.orderLineLeft}>{i.name} × {i.qty}</Text>
-                      <Text style={styles.orderLineRight}>฿{i.price * i.qty}</Text>
+              {myScheduledQueues.map((sq) => {
+                const isReady = sq.status === 'ready';
+                return (
+                  <View key={sq.id} style={[styles.scheduledItemCard, isReady && styles.scheduledItemCardReady]}>
+                    <View style={styles.scheduledItemHeader}>
+                      <Ionicons
+                        name={isReady ? 'checkmark-circle' : 'calendar-outline'}
+                        size={18}
+                        color={isReady ? colors.leaf : colors.primaryDeep}
+                      />
+                      <Text style={styles.scheduledItemDate}>
+                        {formatPickupDateLabel(sq.pickupDate)} · {sq.pickupTime} น.
+                      </Text>
                     </View>
-                  ))}
-                  <TouchableOpacity onPress={() => handleCancelScheduled(sq.id)}>
-                    <Text style={styles.scheduledCancelText}>ยกเลิกออเดอร์นี้</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                    <Text style={isReady ? styles.scheduledReadyText : styles.scheduledWaitingText}>
+                      {isReady ? 'พร้อมรับแล้ว! มารับได้เลยที่ร้าน' : 'รอทางร้านเตรียมอาหารให้อยู่จ้า'}
+                    </Text>
+                    {sq.items?.map((i, idx) => (
+                      <View key={idx} style={styles.orderLine}>
+                        <Text style={styles.orderLineLeft}>{i.name} × {i.qty}</Text>
+                        <Text style={styles.orderLineRight}>฿{i.price * i.qty}</Text>
+                      </View>
+                    ))}
+                    <TouchableOpacity onPress={() => handleCancelScheduled(sq.id)}>
+                      <Text style={styles.scheduledCancelText}>ยกเลิกออเดอร์นี้</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>
           )}
         </ScrollView>
@@ -543,8 +542,11 @@ const styles = StyleSheet.create({
 
   scheduledListWrap: { marginTop: 20 },
   scheduledItemCard: { backgroundColor: colors.card, borderRadius: 20, padding: 16, marginBottom: 10 },
-  scheduledItemHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  scheduledItemCardReady: { borderWidth: 1.5, borderColor: colors.leaf },
+  scheduledItemHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   scheduledItemDate: { fontFamily: fonts.bodyExtraBold, fontSize: 14.5, color: colors.primaryDeep },
+  scheduledWaitingText: { fontFamily: fonts.bodySemiBold, fontSize: 12.5, color: colors.textMuted, marginBottom: 8 },
+  scheduledReadyText: { fontFamily: fonts.bodyExtraBold, fontSize: 12.5, color: colors.leaf, marginBottom: 8 },
   scheduledCancelText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, marginTop: 6 },
 
   orderCard: { marginTop: 14, backgroundColor: colors.card, borderRadius: 20, padding: 16 },

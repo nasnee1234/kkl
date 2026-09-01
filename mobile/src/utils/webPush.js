@@ -39,7 +39,8 @@ export async function registerWebPush() {
 }
 
 // ส่ง Web Push ผ่าน backend (ต้องเซ็นด้วย VAPID private key ฝั่งเซิร์ฟเวอร์) — เรียกจากแอดมินตอนเรียกคิว
-export async function sendWebPush(subscription, queueNumber) {
+// ไม่ใส่ title/body จะใช้ข้อความเรียกคิวแบบเดิม (กำหนดค่าเริ่มต้นที่ backend)
+export async function sendWebPush(subscription, queueNumber, title, body) {
   if (!subscription) return;
 
   try {
@@ -52,7 +53,7 @@ export async function sendWebPush(subscription, queueNumber) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ subscription, queueNumber }),
+      body: JSON.stringify({ subscription, queueNumber, title, body }),
     });
   } catch (e) {
     console.error('sendWebPush:', e.message);

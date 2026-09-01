@@ -59,7 +59,7 @@ export async function createQueueWithNumber(queueData) {
   });
 }
 
-// จองล่วงหน้าข้ามวัน — ยังไม่ได้เลขคิวจริง รอวันที่นัดถึงแล้วแอดมิน "เปิด" ระบบคิว ระบบจะดึงเข้าคิวจริงให้อัตโนมัติ
+// สั่งออเดอร์ล่วงหน้า — ไม่มีเลขคิว ไม่เข้าคิวจริงเลย แอดมินเตรียมของแล้วกดแจ้งลูกค้ามารับเอง
 export async function createScheduledQueue(queueData) {
   const queueRef = await addDoc(collection(db, 'queues'), {
     ...queueData,
@@ -67,29 +67,4 @@ export async function createScheduledQueue(queueData) {
     createdAt: serverTimestamp(),
   });
   return { id: queueRef.id };
-}
-
-// ดึงคิวที่จองล่วงหน้าไว้ (ถึงวันนัดแล้ว) เข้าคิวจริงของวันนี้ — ให้เลขคิวจริงตามลำดับที่เรียก
-export async function activateScheduledQueue(queueId) {
-  return runTransaction(db, async (transaction) => {
-    const queueRef = doc(db, 'queues', queueId);
-    const counterSnapshot = await transaction.get(queueCounterRef);
-    const counterNumber = counterSnapshot.exists()
-      ? Number(counterSnapshot.data().lastNumber) || 0
-      : 0;
-    const nextNumber = counterNumber + 1;
-
-    transaction.set(
-      queueCounterRef,
-      { lastNumber: nextNumber, updatedAt: serverTimestamp() },
-      { merge: true }
-    );
-    transaction.update(queueRef, {
-      number: nextNumber,
-      status: 'waiting',
-      createdAt: serverTimestamp(),
-    });
-
-    return { number: nextNumber };
-  });
 }

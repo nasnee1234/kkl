@@ -7,7 +7,7 @@ export function verifyAdmin(req: AuthedRequest, res: Response) {
 }
 
 export async function sendWebPush(req: AuthedRequest, res: Response) {
-  const { subscription, queueNumber } = req.body;
+  const { subscription, queueNumber, title, body } = req.body;
 
   if (!subscription?.endpoint) {
     return res.status(400).json({ success: false, message: 'subscription ไม่ถูกต้อง' });
@@ -17,8 +17,8 @@ export async function sendWebPush(req: AuthedRequest, res: Response) {
     await webpush.sendNotification(
       subscription,
       JSON.stringify({
-        title: '🔔 ถึงคิวของคุณแล้ว!',
-        body: `คิวหมายเลข ${queueNumber} — กรุณามาที่เคาน์เตอร์`,
+        title: title || '🔔 ถึงคิวของคุณแล้ว!',
+        body: body || `คิวหมายเลข ${queueNumber} — กรุณามาที่เคาน์เตอร์`,
         data: { queueNumber },
       })
     );

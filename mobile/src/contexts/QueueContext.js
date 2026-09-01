@@ -136,7 +136,7 @@ export function QueueProvider({ children }) {
     return unsub;
   }, [myQueue?.id]);
 
-  // ฟังสถานะคิวที่จองล่วงหน้าไว้แต่ละใบ — พอถึงวันนัดแอดมินจะออกเลขให้ (status: scheduled → waiting) ตอนนั้นเลื่อนมาเป็นคิวจริงที่ติดตามอยู่
+  // ฟังสถานะออเดอร์สั่งล่วงหน้าแต่ละใบ — ไม่มีเลขคิว รอแอดมินกดว่าเตรียมเสร็จ (ready) แล้วค่อยกดว่ารับแล้ว (done)
   const scheduledIds = myScheduledQueues.map((q) => q.id).join(',');
   useEffect(() => {
     if (!scheduledIds) return undefined;
@@ -148,15 +148,25 @@ export function QueueProvider({ children }) {
           return;
         }
         const data = snap.data();
-        if (data.status === 'waiting') {
-          pushNotification(`📋 ถึงวันนัดแล้ว! คิวของคุณคือหมายเลข ${data.number}`);
-          takeQueue({ id, ...data });
-          setMyScheduledQueues((prev) => prev.filter((q) => q.id !== id));
-        } else if (data.status === 'cancelled') {
-          setMyScheduledQueues((prev) => prev.filter((q) => q.id !== id));
-        } else {
-          setMyScheduledQueues((prev) => prev.map((q) => (q.id === id ? { ...q, ...data } : q)));
-        }
+        setMyScheduledQueues((prev) => {
+          const prevStatus = prev.find((q) => q.id === id)?.status;
+
+          if (data.status === 'cancelled') {
+            return prev.filter((q) => q.id !== id);
+          }
+          if (data.status === 'done') {
+            if (prevStatus !== 'done') {
+              pushNotification('✅ รับออเดอร์เรียบร้อยแล้ว ขอบคุณที่ใช้บริการ');
+            }
+            return prev.filter((q) => q.id !== id);
+          }
+          if (data.status === 'ready' && prevStatus !== 'ready') {
+            vibrate([0, 400, 150, 400, 150, 400]);
+            speak('ออเดอร์ของคุณพร้อมแล้ว มารับได้เลยจ้า');
+            pushNotification('🎉 ออเดอร์ของคุณพร้อมแล้ว! มารับได้เลยที่ร้าน');
+          }
+          return prev.map((q) => (q.id === id ? { ...q, ...data } : q));
+        });
       })
     );
     return () => unsubs.forEach((u) => u());

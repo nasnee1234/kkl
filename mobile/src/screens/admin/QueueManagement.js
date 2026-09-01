@@ -9,7 +9,7 @@ import {
   doc, serverTimestamp, query, orderBy, where, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { createQueueWithNumber, activateScheduledQueue, toLocalDateStr, MAX_QUEUE_PER_DAY } from '../../utils/queueNumbers';
+import { createQueueWithNumber, MAX_QUEUE_PER_DAY } from '../../utils/queueNumbers';
 import { formatPickupDateLabel } from '../../utils/pickupSchedule';
 import { sendPushNotification } from '../../utils/notifications';
 import { sendWebPush } from '../../utils/webPush';
@@ -45,8 +45,6 @@ export default function QueueManagement() {
   const [cancelScheduledTarget, setCancelScheduledTarget] = useState(null);
   const queuesRef = useRef(queues);
   queuesRef.current = queues;
-  const scheduledRef = useRef(scheduledQueues);
-  scheduledRef.current = scheduledQueues;
 
   // Realtime listener
   useEffect(() => {
@@ -78,40 +76,13 @@ export default function QueueManagement() {
     return () => clearInterval(interval);
   }, []);
 
-  // คิวที่จองล่วงหน้าไว้ (ยังไม่ได้เลขคิวจริง)
+  // ออเดอร์สั่งล่วงหน้า (preorder) — ไม่มีเลขคิว รอแอดมินกดว่าเตรียมเสร็จ/รับแล้วเอง ไม่ auto-activate เข้าคิวจริง
   useEffect(() => {
-    const q = query(collection(db, 'queues'), where('status', '==', 'scheduled'));
+    const q = query(collection(db, 'queues'), where('status', 'in', ['scheduled', 'ready']));
     const unsub = onSnapshot(q, (snap) => {
       setScheduledQueues(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     }, () => {});
     return unsub;
-  }, []);
-
-  // ถึงวันนัดแล้ว — ดึงคิวที่จองล่วงหน้าเข้าคิวจริงของวันนี้อัตโนมัติ (เรียงตามเวลาที่นัดไว้)
-  // ตรวจทันทีเมื่อรายการจองเปลี่ยน (กันพลาดตอนโหลดครั้งแรกที่ realtime listener ยังไม่ทันมีข้อมูล)
-  // และตรวจซ้ำเป็นระยะเผื่อกรณีข้ามวันเที่ยงคืนโดยไม่มีการเปลี่ยนแปลงรายการ
-  const activateDueBookingsRef = useRef();
-  activateDueBookingsRef.current = async () => {
-    const today = toLocalDateStr();
-    const due = scheduledRef.current
-      .filter((q) => q.pickupDate <= today)
-      .sort((a, b) => (a.pickupTime || '').localeCompare(b.pickupTime || ''));
-    for (const q of due) {
-      try {
-        await activateScheduledQueue(q.id);
-      } catch (e) {
-        console.error('activateScheduledQueue:', e.message);
-      }
-    }
-  };
-
-  useEffect(() => {
-    activateDueBookingsRef.current();
-  }, [scheduledQueues]);
-
-  useEffect(() => {
-    const interval = setInterval(() => activateDueBookingsRef.current(), 60000);
-    return () => clearInterval(interval);
   }, []);
 
   // สถานะเปิด/ปิดรับคิว
@@ -291,6 +262,19 @@ export default function QueueManagement() {
     }
   };
 
+  // เตรียมออเดอร์เสร็จแล้ว — แจ้งลูกค้ามารับ (ยังไม่ใช่ "เสร็จสิ้น" จนกว่าลูกค้าจะมารับจริง)
+  const handleMarkReady = async (item) => {
+    await updateDoc(doc(db, 'queues', item.id), { status: 'ready', readyAt: serverTimestamp() });
+    const title = '🎉 ออเดอร์ของคุณพร้อมแล้ว!';
+    const body = 'มารับได้เลยที่ร้านจ้า';
+    if (item.pushToken) {
+      await sendPushNotification(item.pushToken, null, title, body);
+    }
+    if (item.webPushSubscription) {
+      await sendWebPush(item.webPushSubscription, null, title, body);
+    }
+  };
+
   const FILTERS = [
     { key: 'all',       label: `ทั้งหมด (${activeQueues.length})` },
     { key: 'waiting',   label: `รอ (${stats.waiting})` },
@@ -409,12 +393,12 @@ export default function QueueManagement() {
         </TouchableOpacity>
       </View>
 
-      {/* จองล่วงหน้า */}
+      {/* ออเดอร์สั่งล่วงหน้า — ไม่มีเลขคิว รอเตรียมแล้วกดแจ้งลูกค้ามารับเอง */}
       {scheduledQueues.length > 0 && (
         <View style={styles.scheduledSection}>
           <TouchableOpacity style={styles.scheduledHeader} onPress={() => setScheduledExpanded((v) => !v)}>
             <Ionicons name="calendar-outline" size={16} color={adminTheme.accent} />
-            <Text style={styles.scheduledHeaderText}>จองล่วงหน้า ({scheduledQueues.length})</Text>
+            <Text style={styles.scheduledHeaderText}>ออเดอร์สั่งล่วงหน้า ({scheduledQueues.length})</Text>
             <Ionicons name={scheduledExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={adminTheme.textMuted} />
           </TouchableOpacity>
           {scheduledExpanded && (
@@ -424,9 +408,16 @@ export default function QueueManagement() {
                 .map((item) => (
                   <View key={item.id} style={styles.scheduledRow}>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={styles.scheduledDate}>
-                        {formatPickupDateLabel(item.pickupDate)} · {item.pickupTime} น.
-                      </Text>
+                      <View style={styles.scheduledDateRow}>
+                        <Text style={styles.scheduledDate}>
+                          {formatPickupDateLabel(item.pickupDate)} · {item.pickupTime} น.
+                        </Text>
+                        {item.status === 'ready' && (
+                          <View style={styles.readyBadge}>
+                            <Text style={styles.readyBadgeText}>พร้อมรับแล้ว</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={styles.scheduledName}>{item.customerName}</Text>
                       {item.items?.length > 0 && (
                         <Text style={styles.scheduledItems} numberOfLines={2}>
@@ -434,12 +425,28 @@ export default function QueueManagement() {
                         </Text>
                       )}
                     </View>
-                    <TouchableOpacity
-                      style={[styles.actionBtn, { backgroundColor: adminTheme.dangerBg }]}
-                      onPress={() => setCancelScheduledTarget(item)}
-                    >
-                      <Ionicons name="close-outline" size={16} color={adminTheme.danger} />
-                    </TouchableOpacity>
+                    <View style={styles.scheduledActions}>
+                      {item.status === 'scheduled' && (
+                        <TouchableOpacity
+                          style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.calling.bg }]}
+                          onPress={() => handleMarkReady(item)}
+                        >
+                          <Ionicons name="megaphone-outline" size={16} color={ADMIN_STATUS_THEME.calling.color} />
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.done.bg }]}
+                        onPress={() => handleChangeStatus(item, 'done')}
+                      >
+                        <Ionicons name="checkmark-outline" size={16} color={ADMIN_STATUS_THEME.done.color} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { backgroundColor: adminTheme.dangerBg }]}
+                        onPress={() => setCancelScheduledTarget(item)}
+                      >
+                        <Ionicons name="close-outline" size={16} color={adminTheme.danger} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))}
             </ScrollView>
@@ -643,9 +650,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: adminTheme.surfaceAlt, borderRadius: 12, padding: 12, marginBottom: 10,
   },
+  scheduledDateRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   scheduledDate: { color: adminTheme.accent, fontSize: 13, fontWeight: '800' },
+  readyBadge: { backgroundColor: ADMIN_STATUS_THEME.done.bg, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 },
+  readyBadgeText: { color: ADMIN_STATUS_THEME.done.color, fontSize: 10.5, fontWeight: '800' },
   scheduledName: { color: adminTheme.text, fontSize: 14, fontWeight: '600', marginTop: 2 },
   scheduledItems: { color: adminTheme.textMuted, fontSize: 12, marginTop: 3, lineHeight: 16 },
+  scheduledActions: { flexDirection: 'row', gap: 6 },
   scrollFlex: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
   stickyFilterBar: {
