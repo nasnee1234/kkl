@@ -22,7 +22,7 @@ import Receipt from '../components/Receipt';
 import IncomingCallOverlay from '../components/IncomingCallOverlay';
 import ClosedPopup from '../components/ClosedPopup';
 import Toast, { useToast } from '../components/Toast';
-import WheelPicker from '../components/WheelPicker';
+import DateCalendarPicker from '../components/DateCalendarPicker';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
@@ -244,17 +244,36 @@ export default function QueueRequest() {
                 )}
               </ScrollView>
 
-              <Text style={styles.sectionLabel}>มารับตอนไหน</Text>
-              <View style={styles.wheelsRow}>
-                <WheelPicker options={DATE_OPTIONS} value={pickupDate} onChange={changePickupDate} />
-                {timeOptions.length > 0 ? (
-                  <WheelPicker options={timeOptions} value={pickupTime} onChange={setPickupTime} />
-                ) : (
-                  <View style={styles.wheelEmptyBox}>
-                    <Text style={styles.wheelEmptyText}>ร้านปิดแล้ว{'\n'}เลือกวันอื่น</Text>
-                  </View>
-                )}
-              </View>
+              <Text style={styles.sectionLabel}>เลือกวันมารับ</Text>
+              <DateCalendarPicker
+                value={pickupDate}
+                onChange={changePickupDate}
+                minDate={DATE_OPTIONS[0].value}
+                maxDate={DATE_OPTIONS[DATE_OPTIONS.length - 1].value}
+              />
+
+              <Text style={styles.sectionLabel}>เลือกเวลามารับ</Text>
+              {timeOptions.length > 0 ? (
+                <View style={styles.timeGrid}>
+                  {timeOptions.map((opt) => {
+                    const active = opt.value === pickupTime;
+                    return (
+                      <TouchableOpacity
+                        key={opt.value}
+                        style={[styles.timeChip, active && styles.timeChipActive]}
+                        onPress={() => setPickupTime(opt.value)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.timeChipText, active && styles.timeChipTextActive]}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View style={styles.timeEmptyBox}>
+                  <Text style={styles.timeEmptyText}>ร้านปิดแล้วสำหรับวันนี้ เลือกวันอื่นได้เลย</Text>
+                </View>
+              )}
 
               <View style={styles.bookingTotalRow}>
                 <Text style={styles.bookingTotalLabel}>ยอดรวม</Text>
@@ -532,9 +551,16 @@ const styles = StyleSheet.create({
   stepperBtnAdd: { backgroundColor: colors.primary },
   stepperQty: { fontFamily: fonts.bodyExtraBold, fontSize: 14, minWidth: 13, textAlign: 'center', color: colors.textDark },
   sectionLabel: { fontFamily: fonts.bodyExtraBold, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textMuted, marginTop: 18, marginBottom: 10 },
-  wheelsRow: { flexDirection: 'row', gap: 10 },
-  wheelEmptyBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  wheelEmptyText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, textAlign: 'center' },
+  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  timeChip: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+    paddingVertical: 10, paddingHorizontal: 14, backgroundColor: '#fff',
+  },
+  timeChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  timeChipText: { fontFamily: fonts.bodySemiBold, fontSize: 13.5, color: colors.textDark },
+  timeChipTextActive: { color: '#fff', fontFamily: fonts.bodyExtraBold },
+  timeEmptyBox: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 18, alignItems: 'center' },
+  timeEmptyText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   bookingTotalRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
     marginTop: 18, paddingTop: 12, borderTopWidth: 1.5, borderTopColor: colors.border, borderStyle: 'dashed',
