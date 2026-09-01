@@ -14,7 +14,7 @@ import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc
 import { useQueue } from '../contexts/QueueContext';
 import { db } from '../config/firebase';
 import { createQueueWithNumber, createScheduledQueue, formatQueueLabel, toLocalDateStr } from '../utils/queueNumbers';
-import { getDateOptions, getTimeOptions, formatPickupDateLabel, groupDateOptionsByMonth } from '../utils/pickupSchedule';
+import { getTimeOptions, formatPickupDateLabel, MONTH_OPTIONS, getDayOptions, buildPickupDate } from '../utils/pickupSchedule';
 import { registerForPushNotifications } from '../utils/notifications';
 import AnimatedPressable from '../components/AnimatedPressable';
 import ProgressRing from '../components/ProgressRing';
@@ -32,9 +32,6 @@ const STATUS_COPY = {
   cancelled: { title: 'คิวถูกยกเลิก', note: 'คุณสามารถสั่งใหม่ได้', icon: 'close-outline', iconBg: colors.primaryDeep },
 };
 
-const DATE_OPTIONS = getDateOptions(7);
-const { monthOptions: MONTH_OPTIONS, daysByMonth: DAYS_BY_MONTH } = groupDateOptionsByMonth(DATE_OPTIONS);
-
 export default function QueueRequest() {
   const {
     myQueue, takeQueue, clearQueue, callAlert, preWarning, dismissCallAlert, dismissPreWarning,
@@ -48,7 +45,7 @@ export default function QueueRequest() {
   const [menus, setMenus] = useState([]);
   const [bookingModalVisible, setBookingModalVisible] = useState(false);
   const [cartQty, setCartQty] = useState({});
-  const [pickupDate, setPickupDate] = useState(DATE_OPTIONS[0].value);
+  const [pickupDate, setPickupDate] = useState(toLocalDateStr());
   const [pickupTime, setPickupTime] = useState('');
   const [bookingSaving, setBookingSaving] = useState(false);
 
@@ -71,21 +68,26 @@ export default function QueueRequest() {
     setCartQty((prev) => ({ ...prev, [menuId]: Math.max(0, (prev[menuId] || 0) + delta) }));
   };
 
-  const changePickupDate = (value) => {
+  const setPickupDateAndTime = (value) => {
     setPickupDate(value);
     const nextTimes = getTimeOptions(value);
     setPickupTime(nextTimes[0]?.value || '');
   };
 
-  const pickupMonthKey = pickupDate.slice(0, 7); // "YYYY-MM"
-  const dayOptions = DAYS_BY_MONTH[pickupMonthKey] || [];
+  const pickupMonthNum = Number(pickupDate.slice(5, 7));
+  const pickupDayStr = pickupDate.slice(8, 10);
+  const dayOptions = getDayOptions(pickupMonthNum);
 
-  const changeMonth = (monthKey) => {
-    const days = DAYS_BY_MONTH[monthKey];
-    if (!days || days.length === 0) return;
-    const currentDay = pickupDate.slice(8, 10);
-    const sameDay = days.find((d) => d.value.slice(8, 10) === currentDay);
-    changePickupDate(sameDay ? sameDay.value : days[0].value);
+  const changeDay = (dayStr) => {
+    setPickupDateAndTime(buildPickupDate(pickupMonthNum, Number(dayStr)));
+  };
+
+  const changeMonth = (monthStr) => {
+    const month = Number(monthStr);
+    const days = getDayOptions(month);
+    const sameDay = days.find((d) => d.value === pickupDayStr);
+    const day = Number(sameDay ? sameDay.value : days[0].value);
+    setPickupDateAndTime(buildPickupDate(month, day));
   };
 
   const hourOptions = [...new Set(timeOptions.map((t) => t.value.split(':')[0]))].map((h) => ({ value: h, label: h }));
@@ -106,7 +108,7 @@ export default function QueueRequest() {
       return;
     }
     setCartQty({});
-    const firstDate = DATE_OPTIONS[0].value;
+    const firstDate = toLocalDateStr();
     setPickupDate(firstDate);
     setPickupTime(getTimeOptions(firstDate)[0]?.value || '');
     setBookingModalVisible(true);
@@ -271,8 +273,8 @@ export default function QueueRequest() {
               <Text style={styles.sectionLabel}>วันและเวลา</Text>
 
               <View style={styles.selectRow}>
-                <SelectField options={dayOptions} value={pickupDate} onChange={changePickupDate} />
-                <SelectField options={MONTH_OPTIONS} value={pickupMonthKey} onChange={changeMonth} />
+                <SelectField options={dayOptions} value={pickupDayStr} onChange={changeDay} />
+                <SelectField options={MONTH_OPTIONS} value={String(pickupMonthNum).padStart(2, '0')} onChange={changeMonth} />
               </View>
 
               {timeOptions.length > 0 ? (
@@ -283,7 +285,7 @@ export default function QueueRequest() {
                 </View>
               ) : (
                 <View style={styles.timeEmptyBox}>
-                  <Text style={styles.timeEmptyText}>ร้านปิดแล้วสำหรับวันนี้ เลือกวันอื่นได้เลย</Text>
+                  <Text style={styles.timeEmptyText}>หมดเวลาสำหรับวันนี้แล้ว เลือกวันอื่นได้เลย</Text>
                 </View>
               )}
 
