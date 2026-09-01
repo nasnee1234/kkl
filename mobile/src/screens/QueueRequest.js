@@ -23,6 +23,7 @@ import IncomingCallOverlay from '../components/IncomingCallOverlay';
 import ClosedPopup from '../components/ClosedPopup';
 import Toast, { useToast } from '../components/Toast';
 import SelectField from '../components/SelectField';
+import ScreenHeader from '../components/ScreenHeader';
 import { colors, APP_MAX_WIDTH } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
@@ -199,7 +200,7 @@ export default function QueueRequest() {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.h2}>คิวของฉัน</Text>
+          <ScreenHeader title="คิวของฉัน" />
 
           <View style={styles.noTicketCard}>
             <Text style={styles.servingLabelSmall}>ตอนนี้เรียกถึงคิว</Text>
@@ -365,7 +366,7 @@ export default function QueueRequest() {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.h2}>คิวของฉัน</Text>
+          <ScreenHeader title="คิวของฉัน" />
 
           {preWarning && (
             <TouchableOpacity style={styles.preWarnBanner} onPress={dismissPreWarning} activeOpacity={0.85}>
@@ -457,7 +458,7 @@ export default function QueueRequest() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.h2}>คิวของฉัน</Text>
+        <ScreenHeader title="คิวของฉัน" />
         <View style={styles.statusCard}>
           <View style={[styles.statusIcon, { backgroundColor: copy.iconBg }]}>
             <Ionicons name={copy.icon} size={40} color="#fff" />
@@ -503,7 +504,6 @@ export default function QueueRequest() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
   content: { padding: 18, paddingTop: 52, paddingBottom: 118 },
-  h2: { fontFamily: fonts.heading, fontSize: 26, color: colors.textDark, marginBottom: 16 },
 
   noTicketCard: { backgroundColor: colors.card, borderRadius: 28, padding: 22, paddingBottom: 26, alignItems: 'center' },
   servingLabelSmall: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.textMuted },

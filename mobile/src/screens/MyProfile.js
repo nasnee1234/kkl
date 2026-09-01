@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useQueue } from '../contexts/QueueContext';
+import ScreenHeader from '../components/ScreenHeader';
 import { colors, APP_MAX_WIDTH } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
@@ -34,7 +35,7 @@ export default function MyProfile() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>ฉัน</Text>
+      <ScreenHeader title="ฉัน" />
 
       <View style={styles.card}>
         {toggles.map((t, i) => (
@@ -117,7 +118,6 @@ export default function MyProfile() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
   content: { padding: 18, paddingTop: 52, paddingBottom: 118 },
-  screenTitle: { fontFamily: fonts.heading, fontSize: 26, color: colors.textDark, marginBottom: 16 },
 
   card: { backgroundColor: colors.card, borderRadius: 28, overflow: 'hidden' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 13, padding: 16 },

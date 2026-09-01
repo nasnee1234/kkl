@@ -13,6 +13,7 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { getMenuImageUrl } from '../utils/imageUrls';
 import { getLocalMenuImage } from '../assets/menuImages';
+import ScreenHeader from '../components/ScreenHeader';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
@@ -89,7 +90,7 @@ export default function FoodMenu() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View>
-            <Text style={styles.heading}>เมนูทั้งร้าน</Text>
+            <ScreenHeader title="เมนูทั้งร้าน" style={styles.menuHeader} />
             <View style={styles.searchBox}>
               <Ionicons name="search-outline" size={18} color={colors.textDark} />
               <TextInput
@@ -124,7 +125,7 @@ export default function FoodMenu() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream },
-  heading: { fontFamily: fonts.heading, fontSize: 26, color: colors.textDark, marginTop: 52, marginBottom: 14, paddingHorizontal: 18 },
+  menuHeader: { marginTop: 52, marginHorizontal: 18 },
   searchBox: {
     height: 48,
     borderRadius: 999,

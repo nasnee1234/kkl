@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueue } from '../contexts/QueueContext';
+import ScreenHeader from '../components/ScreenHeader';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
@@ -28,11 +29,15 @@ export default function Notifications() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.h2}>แจ้งเตือน</Text>
-        <TouchableOpacity onPress={markNotificationsRead}>
-          <Text style={styles.readAll}>อ่านทั้งหมด</Text>
-        </TouchableOpacity>
+      <View style={styles.headerWrap}>
+        <ScreenHeader
+          title="แจ้งเตือน"
+          right={
+            <TouchableOpacity onPress={markNotificationsRead}>
+              <Text style={styles.readAll}>อ่านทั้งหมด</Text>
+            </TouchableOpacity>
+          }
+        />
       </View>
 
       <FlatList
@@ -72,11 +77,7 @@ export default function Notifications() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  header: {
-    paddingTop: 52, paddingHorizontal: 18, paddingBottom: 16,
-    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
-  },
-  h2: { fontFamily: fonts.heading, fontSize: 26, color: colors.textDark },
+  headerWrap: { paddingTop: 52, paddingHorizontal: 18 },
   readAll: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.primaryDeep },
   list: { paddingHorizontal: 18, paddingBottom: 118, flexGrow: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 80, gap: 10 },
