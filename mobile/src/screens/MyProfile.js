@@ -7,6 +7,7 @@ import {
   Modal,
   TextInput,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -14,12 +15,16 @@ import { useQueue } from '../contexts/QueueContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
+const SHOP_PHONE = '0812773375';
+const SHOP_PHONE_LABEL = '081-277-3375';
+
 export default function MyProfile() {
   const navigation = useNavigation();
   const { soundEnabled, vibrateEnabled, preAlertEnabled, toggleSound, toggleVibrate, togglePreAlert } = useQueue();
   const [user, setUser] = useState({ name: 'ผู้ใช้งาน', phone: '' });
   const [editOpen, setEditOpen] = useState(false);
   const [phone, setPhone] = useState('');
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const handleSave = () => {
     setUser((prev) => ({ ...prev, phone }));
@@ -73,7 +78,12 @@ export default function MyProfile() {
         ))}
 
         {rows.map((r, i) => (
-          <TouchableOpacity key={r.label} style={[styles.navRow, styles.rowBorder]} activeOpacity={0.7}>
+          <TouchableOpacity
+            key={r.label}
+            style={[styles.navRow, styles.rowBorder]}
+            activeOpacity={0.7}
+            onPress={() => setHelpOpen(true)}
+          >
             <View style={styles.rowIconNeutral}>
               <Ionicons name={r.icon} size={19} color={colors.textDark} />
             </View>
@@ -90,6 +100,37 @@ export default function MyProfile() {
           <Ionicons name="chevron-forward-outline" size={18} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
+
+      <Modal visible={helpOpen} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <View style={styles.helpIconCircle}>
+              <Ionicons name="help-circle-outline" size={30} color={colors.primaryDeep} />
+            </View>
+            <Text style={[styles.modalTitle, { textAlign: 'center' }]}>ติดต่อร้าน</Text>
+            <Text style={styles.helpDesc}>มีคำถามหรือต้องการความช่วยเหลือ ติดต่อร้านได้ที่เบอร์นี้เลยจ้า</Text>
+
+            <TouchableOpacity
+              style={styles.helpPhoneRow}
+              activeOpacity={0.8}
+              onPress={() => Linking.openURL(`tel:${SHOP_PHONE}`)}
+            >
+              <View style={styles.rowIcon}>
+                <Ionicons name="call-outline" size={19} color={colors.primaryDeep} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.helpPhoneLabel}>โทรหาร้าน</Text>
+                <Text style={styles.helpPhoneNumber}>{SHOP_PHONE_LABEL}</Text>
+              </View>
+              <Ionicons name="chevron-forward-outline" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setHelpOpen(false)}>
+              <Text style={styles.cancelBtnText}>ปิด</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={editOpen} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -142,6 +183,18 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(32,30,29,0.5)', justifyContent: 'flex-end' },
   modalBox: { backgroundColor: colors.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24 },
   modalTitle: { fontFamily: fonts.heading, fontSize: 20, color: colors.textDark, marginBottom: 16 },
+
+  helpIconCircle: {
+    width: 56, height: 56, borderRadius: 28, backgroundColor: colors.creamSoft,
+    alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 10,
+  },
+  helpDesc: { fontFamily: fonts.body, fontSize: 13.5, color: colors.textMuted, textAlign: 'center', marginTop: -8, marginBottom: 18, lineHeight: 19 },
+  helpPhoneRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 13,
+    backgroundColor: colors.creamSoft, borderRadius: 18, padding: 14, marginBottom: 8,
+  },
+  helpPhoneLabel: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
+  helpPhoneNumber: { fontFamily: fonts.bodyExtraBold, fontSize: 17, color: colors.textDark, marginTop: 2 },
   input: {
     borderWidth: 1, borderColor: colors.border, borderRadius: 999, padding: 14,
     fontFamily: fonts.body, fontSize: 15, color: colors.textDark, marginBottom: 16,
