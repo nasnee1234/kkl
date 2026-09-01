@@ -36,6 +36,7 @@ export default function QueueRequest() {
   const {
     myQueue, takeQueue, clearQueue, callAlert, preWarning, dismissCallAlert, dismissPreWarning,
     callingNumber, queueProgress, acceptingQueue,
+    myScheduledQueues, addScheduledQueue, removeScheduledQueue,
   } = useQueue();
   const [receiptVisible, setReceiptVisible] = useState(false);
   const [bookingQuick, setBookingQuick] = useState(false);
@@ -136,7 +137,7 @@ export default function QueueRequest() {
         showToast(`จองคิวแล้ว! คิวของคุณคือ ${formatQueueLabel(queue.number)}`);
       } else {
         const queue = await createScheduledQueue(baseData);
-        takeQueue({ id: queue.id, number: null, status: 'scheduled', ...baseData });
+        addScheduledQueue({ id: queue.id, number: null, status: 'scheduled', ...baseData });
         showToast(`จองคิวล่วงหน้าแล้ว! วันที่ ${formatPickupDateLabel(pickupDate)}`);
       }
       setBookingModalVisible(false);
@@ -194,6 +195,16 @@ export default function QueueRequest() {
     showToast('ยกเลิกคิวแล้ว มาใหม่ได้ตลอดจ๊ะ');
   };
 
+  const handleCancelScheduled = async (id) => {
+    try {
+      await updateDoc(doc(db, 'queues', id), { status: 'cancelled' });
+    } catch (e) {
+      // เน็ตหลุดหรือสิทธิ์ไม่พอ — ยังเคลียร์ฝั่งเราไว้ก่อน แอดมินเห็นสถานะเดิมได้จาก Firestore
+    }
+    removeScheduledQueue(id);
+    showToast('ยกเลิกการจองแล้ว');
+  };
+
   // ── ไม่มีคิวอยู่: ปุ่มรับคิวด่วน + ทางเลือกสั่งอาหารพร้อมจอง ──
   if (!myQueue) {
     return (
@@ -228,8 +239,33 @@ export default function QueueRequest() {
           </View>
 
           <TouchableOpacity style={styles.secondaryBtn} onPress={openBookingModal} activeOpacity={0.85}>
-            <Text style={styles.secondaryBtnText}>จองคิว เลือกเวลา + เมนู</Text>
+            <Text style={styles.secondaryBtnText}>จองคิวล่วงหน้า เลือกเวลา + เมนู</Text>
           </TouchableOpacity>
+
+          {myScheduledQueues.length > 0 && (
+            <View style={styles.scheduledListWrap}>
+              <Text style={styles.sectionLabel}>คิวที่จองไว้ล่วงหน้า</Text>
+              {myScheduledQueues.map((sq) => (
+                <View key={sq.id} style={styles.scheduledItemCard}>
+                  <View style={styles.scheduledItemHeader}>
+                    <Ionicons name="calendar-outline" size={18} color={colors.primaryDeep} />
+                    <Text style={styles.scheduledItemDate}>
+                      {formatPickupDateLabel(sq.pickupDate)} · {sq.pickupTime} น.
+                    </Text>
+                  </View>
+                  {sq.items?.map((i, idx) => (
+                    <View key={idx} style={styles.orderLine}>
+                      <Text style={styles.orderLineLeft}>{i.name} × {i.qty}</Text>
+                      <Text style={styles.orderLineRight}>฿{i.price * i.qty}</Text>
+                    </View>
+                  ))}
+                  <TouchableOpacity onPress={() => handleCancelScheduled(sq.id)}>
+                    <Text style={styles.scheduledCancelText}>ยกเลิกการจองนี้</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
         <Toast message={toastMsg} />
         <ClosedPopup visible={closedPopupVisible} onAck={() => setClosedPopupVisible(false)} />
@@ -244,7 +280,7 @@ export default function QueueRequest() {
         <Modal visible={bookingModalVisible} transparent animationType="slide">
           <View style={styles.overlay}>
             <View style={styles.bookingBox}>
-              <Text style={styles.modalTitle}>จองคิว + เลือกเมนู</Text>
+              <Text style={styles.modalTitle}>จองคิวล่วงหน้า + เลือกเมนู</Text>
 
               <ScrollView style={styles.bookingList} keyboardShouldPersistTaps="handled">
                 {menus.length === 0 ? (
@@ -324,43 +360,6 @@ export default function QueueRequest() {
   }
 
   const status = myQueue.status || 'waiting';
-
-  // ── จองล่วงหน้าไว้ ยังไม่ถึงวันนัด: ยังไม่มีเลขคิวจริง ──
-  if (status === 'scheduled') {
-    return (
-      <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.h2}>คิวของฉัน</Text>
-
-          <View style={styles.scheduledCard}>
-            <Ionicons name="calendar-outline" size={44} color={colors.primaryDeep} />
-            <Text style={styles.scheduledTitle}>จองคิวล่วงหน้าแล้ว</Text>
-            <Text style={styles.scheduledDate}>
-              {formatPickupDateLabel(myQueue.pickupDate)} · {myQueue.pickupTime} น.
-            </Text>
-            <Text style={styles.scheduledNote}>ถึงวันนัดแล้วระบบจะออกเลขคิวให้อัตโนมัติ</Text>
-          </View>
-
-          {myQueue.items?.length > 0 && (
-            <View style={styles.orderCard}>
-              <Text style={styles.orderCardTitle}>ออเดอร์ของคุณ</Text>
-              {myQueue.items.map((i, idx) => (
-                <View key={idx} style={styles.orderLine}>
-                  <Text style={styles.orderLineLeft}>{i.name} × {i.qty}</Text>
-                  <Text style={styles.orderLineRight}>฿{i.price * i.qty}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} activeOpacity={0.8}>
-            <Text style={styles.cancelBtnText}>ยกเลิกการจอง</Text>
-          </TouchableOpacity>
-        </ScrollView>
-        <Toast message={toastMsg} />
-      </View>
-    );
-  }
 
   // ── มีคิวอยู่และยังรอ: การ์ดเข้ม + วงแหวนนับถอยหลัง ──
   if (status === 'waiting') {
@@ -542,12 +541,11 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: { fontFamily: fonts.heading, fontSize: 19, color: colors.primaryDeep },
 
-  scheduledCard: {
-    backgroundColor: colors.card, borderRadius: 28, padding: 26, alignItems: 'center',
-  },
-  scheduledTitle: { fontFamily: fonts.heading, fontSize: 22, color: colors.textDark, marginTop: 12 },
-  scheduledDate: { fontFamily: fonts.bodyExtraBold, fontSize: 18, color: colors.primaryDeep, marginTop: 8 },
-  scheduledNote: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, marginTop: 8, textAlign: 'center' },
+  scheduledListWrap: { marginTop: 20 },
+  scheduledItemCard: { backgroundColor: colors.card, borderRadius: 20, padding: 16, marginBottom: 10 },
+  scheduledItemHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  scheduledItemDate: { fontFamily: fonts.bodyExtraBold, fontSize: 14.5, color: colors.primaryDeep },
+  scheduledCancelText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, marginTop: 6 },
 
   orderCard: { marginTop: 14, backgroundColor: colors.card, borderRadius: 20, padding: 16 },
   orderCardTitle: { fontFamily: fonts.bodyExtraBold, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textMuted, marginBottom: 10 },

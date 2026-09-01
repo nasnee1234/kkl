@@ -17,6 +17,7 @@ const QUEUE_AHEAD_NORMALIZE = 4; // ใช้คำนวณ % ของวง�
 
 export function QueueProvider({ children }) {
   const [myQueue, setMyQueue] = useState(null);
+  const [myScheduledQueues, setMyScheduledQueues] = useState([]); // จองล่วงหน้าไว้ได้หลายใบพร้อมกัน แยกจากคิวที่กำลังรอวันนี้
   const [callAlert, setCallAlert] = useState(false);
   const [preWarning, setPreWarning] = useState(false);
   const [acceptingQueue, setAcceptingQueue] = useState(true);
@@ -135,6 +136,40 @@ export function QueueProvider({ children }) {
     return unsub;
   }, [myQueue?.id]);
 
+  // ฟังสถานะคิวที่จองล่วงหน้าไว้แต่ละใบ — พอถึงวันนัดแอดมินจะออกเลขให้ (status: scheduled → waiting) ตอนนั้นเลื่อนมาเป็นคิวจริงที่ติดตามอยู่
+  const scheduledIds = myScheduledQueues.map((q) => q.id).join(',');
+  useEffect(() => {
+    if (!scheduledIds) return undefined;
+    const ids = scheduledIds.split(',');
+    const unsubs = ids.map((id) =>
+      onSnapshot(doc(db, 'queues', id), (snap) => {
+        if (!snap.exists()) {
+          setMyScheduledQueues((prev) => prev.filter((q) => q.id !== id));
+          return;
+        }
+        const data = snap.data();
+        if (data.status === 'waiting') {
+          pushNotification(`📋 ถึงวันนัดแล้ว! คิวของคุณคือหมายเลข ${data.number}`);
+          takeQueue({ id, ...data });
+          setMyScheduledQueues((prev) => prev.filter((q) => q.id !== id));
+        } else if (data.status === 'cancelled') {
+          setMyScheduledQueues((prev) => prev.filter((q) => q.id !== id));
+        } else {
+          setMyScheduledQueues((prev) => prev.map((q) => (q.id === id ? { ...q, ...data } : q)));
+        }
+      })
+    );
+    return () => unsubs.forEach((u) => u());
+  }, [scheduledIds]);
+
+  const addScheduledQueue = (queue) => {
+    setMyScheduledQueues((prev) => [...prev, { status: 'scheduled', ...queue }]);
+  };
+
+  const removeScheduledQueue = (id) => {
+    setMyScheduledQueues((prev) => prev.filter((q) => q.id !== id));
+  };
+
   // คำนวณ "อีกกี่คิวถึงตัวเอง" จาก callingNumber กลาง เพื่อเตือนล่วงหน้า 2 คิว
   useEffect(() => {
     if (!myQueue?.id || myQueue.status !== 'waiting' || callingNumber == null) {
@@ -196,6 +231,9 @@ export function QueueProvider({ children }) {
         myQueue,
         takeQueue,
         clearQueue,
+        myScheduledQueues,
+        addScheduledQueue,
+        removeScheduledQueue,
         STATUS_LABEL,
         callAlert,
         preWarning,
