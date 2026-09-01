@@ -23,7 +23,7 @@ import IncomingCallOverlay from '../components/IncomingCallOverlay';
 import ClosedPopup from '../components/ClosedPopup';
 import Toast, { useToast } from '../components/Toast';
 import SelectField from '../components/SelectField';
-import { colors } from '../theme/colors';
+import { colors, APP_MAX_WIDTH } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
 const STATUS_COPY = {
@@ -554,7 +554,10 @@ const styles = StyleSheet.create({
   orderLineRight: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.textDark },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  bookingBox: { backgroundColor: colors.cream, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22, maxHeight: '88%' },
+  bookingBox: {
+    backgroundColor: colors.cream, borderRadius: 24, padding: 22, maxHeight: '88%',
+    width: '100%', maxWidth: APP_MAX_WIDTH, alignSelf: 'center',
+  },
   modalTitle: { fontFamily: fonts.heading, fontSize: 20, color: colors.textDark, marginBottom: 14 },
   bookingList: { maxHeight: 260 },
   bookingEmpty: { textAlign: 'center', color: colors.textMuted, paddingVertical: 20 },

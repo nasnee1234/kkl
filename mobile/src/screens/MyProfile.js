@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useQueue } from '../contexts/QueueContext';
-import { colors } from '../theme/colors';
+import { colors, APP_MAX_WIDTH } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
 const SHOP_PHONE = '0812773375';
@@ -181,7 +181,10 @@ const styles = StyleSheet.create({
   navRowLabel: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 14.5, color: colors.textDark },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(32,30,29,0.5)', justifyContent: 'flex-end' },
-  modalBox: { backgroundColor: colors.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24 },
+  modalBox: {
+    backgroundColor: colors.card, borderRadius: 28, padding: 24,
+    width: '100%', maxWidth: APP_MAX_WIDTH, alignSelf: 'center',
+  },
   modalTitle: { fontFamily: fonts.heading, fontSize: 20, color: colors.textDark, marginBottom: 16 },
 
   helpIconCircle: {

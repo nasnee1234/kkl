@@ -15,7 +15,7 @@ import { sendPushNotification } from '../../utils/notifications';
 import { sendWebPush } from '../../utils/webPush';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import ConfirmDialog from '../../components/ConfirmDialog';
-import { adminTheme, ADMIN_STATUS_THEME, colors } from '../../theme/colors';
+import { adminTheme, ADMIN_STATUS_THEME, colors, APP_MAX_WIDTH } from '../../theme/colors';
 
 const PAYMENT_OPTIONS = [
   { key: 'cash', label: 'เงินสด', icon: 'cash-outline', note: 'ชำระหน้าเคาน์เตอร์' },
@@ -681,7 +681,10 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 6 },
   actionBtn: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalBox: { backgroundColor: adminTheme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%' },
+  modalBox: {
+    backgroundColor: adminTheme.surface, borderRadius: 24, padding: 24, maxHeight: '90%',
+    width: '100%', maxWidth: APP_MAX_WIDTH, alignSelf: 'center',
+  },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: adminTheme.text, marginBottom: 4 },
   modalSub: { fontSize: 13, color: adminTheme.textMuted, marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: adminTheme.text, marginBottom: 6 },

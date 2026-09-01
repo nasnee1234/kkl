@@ -12,7 +12,7 @@ import { db } from '../../config/firebase';
 import { getMenuImageUrl } from '../../utils/imageUrls';
 import { MENU_IMAGE_MAP, MENU_IMAGE_KEYS, getLocalMenuImage } from '../../assets/menuImages';
 import AnimatedPressable from '../../components/AnimatedPressable';
-import { adminTheme } from '../../theme/colors';
+import { adminTheme, APP_MAX_WIDTH } from '../../theme/colors';
 
 const EMPTY_FORM = { name: '', price: '', imageKey: '', emoji: '🍗' };
 
@@ -342,7 +342,10 @@ const styles = StyleSheet.create({
   editBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: adminTheme.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   deleteBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: adminTheme.dangerBg, alignItems: 'center', justifyContent: 'center' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalBox: { backgroundColor: adminTheme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%' },
+  modalBox: {
+    backgroundColor: adminTheme.surface, borderRadius: 24, padding: 24, maxHeight: '90%',
+    width: '100%', maxWidth: APP_MAX_WIDTH, alignSelf: 'center',
+  },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: adminTheme.text, marginBottom: 16 },
   fieldBox: { marginBottom: 14 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: adminTheme.text, marginBottom: 5 },

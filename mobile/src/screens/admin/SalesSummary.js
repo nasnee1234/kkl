@@ -6,9 +6,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { colors, adminTheme } from '../../theme/colors';
+import { colors, adminTheme, APP_MAX_WIDTH } from '../../theme/colors';
 
-const { width } = Dimensions.get('window');
+// จำกัดไม่ให้เกินความกว้างจริงของแอป (คอลัมน์กลางจอบนเว็บ) เพราะ Dimensions.get('window')
+// รายงานความกว้างเบราว์เซอร์ทั้งหมด ไม่ใช่ความกว้างที่แอปแสดงจริง
+const width = Math.min(Dimensions.get('window').width, APP_MAX_WIDTH);
 
 const TABS = [
   { key: 'daily',   label: 'วัน' },

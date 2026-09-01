@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, TouchableOpacity, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -31,7 +31,7 @@ import QueueManagement from './src/screens/admin/QueueManagement';
 import ConfirmDialog from './src/components/ConfirmDialog';
 import { QueueProvider, useQueue } from './src/contexts/QueueContext';
 import { auth } from './src/config/firebase';
-import { colors, adminTheme } from './src/theme/colors';
+import { colors, adminTheme, APP_MAX_WIDTH } from './src/theme/colors';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -211,26 +211,47 @@ export default function App() {
   }
 
   return (
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      <QueueProvider>
-        <NavigationContainer>
-          <StatusBar style="light" />
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="CustomerTabs" component={CustomerTabs} />
-            <Stack.Screen
-              name="AdminLogin"
-              component={AdminLogin}
-              options={{
-                headerShown: true,
-                title: 'เข้าสู่ระบบผู้ดูแล',
-                headerStyle: { backgroundColor: adminTheme.bg },
-                headerTintColor: adminTheme.text,
-              }}
-            />
-            <Stack.Screen name="AdminTabs" component={AdminGuard} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </QueueProvider>
+    <View style={styles.appOuter} onLayout={onLayoutRootView}>
+      <View style={styles.appFrame}>
+        <QueueProvider>
+          <NavigationContainer>
+            <StatusBar style="light" />
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="CustomerTabs" component={CustomerTabs} />
+              <Stack.Screen
+                name="AdminLogin"
+                component={AdminLogin}
+                options={{
+                  headerShown: true,
+                  title: 'เข้าสู่ระบบผู้ดูแล',
+                  headerStyle: { backgroundColor: adminTheme.bg },
+                  headerTintColor: adminTheme.text,
+                }}
+              />
+              <Stack.Screen name="AdminTabs" component={AdminGuard} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </QueueProvider>
+      </View>
     </View>
   );
 }
+
+const styles = {
+  // จอกว้างเกิน APP_MAX_WIDTH (คอม/แท็บเล็ต) จะเห็นแอปเป็นคอลัมน์กลางจอแทนยืดเต็มความกว้าง
+  appOuter: {
+    flex: 1,
+    ...Platform.select({
+      web: { backgroundColor: '#e7e0d4', alignItems: 'center' },
+      default: {},
+    }),
+  },
+  appFrame: {
+    flex: 1,
+    width: '100%',
+    ...Platform.select({
+      web: { maxWidth: APP_MAX_WIDTH, position: 'relative', overflow: 'hidden' },
+      default: {},
+    }),
+  },
+};
