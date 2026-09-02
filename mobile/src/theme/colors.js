@@ -4,7 +4,7 @@
 
 // ขนาดกรอบ/ป็อปอัพย้ายไปอยู่ที่ theme/layout.js แล้ว (มี useLayout สำหรับค่าที่ยืดตามจอ)
 // re-export ไว้เพื่อไม่ให้ไฟล์ที่ import จากที่นี่พังระหว่างย้าย
-export { APP_MAX_WIDTH, MODAL_MAX_WIDTH } from './layout';
+export { MODAL_MAX_WIDTH } from './layout';
 
 export const colors = {
   // ส้มอมน้ำตาลไหม้ terracotta — สีหลัก (--color-accent) เฉดเข้มขึ้นหนึ่งขั้นจากต้นแบบ
