@@ -15,7 +15,8 @@ import { sendPushNotification } from '../../utils/notifications';
 import { sendWebPush } from '../../utils/webPush';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import ConfirmDialog from '../../components/ConfirmDialog';
-import { adminTheme, ADMIN_STATUS_THEME, colors, APP_MAX_WIDTH } from '../../theme/colors';
+import { adminTheme, ADMIN_STATUS_THEME, colors } from '../../theme/colors';
+import { MODAL_MAX_WIDTH, useLayout } from '../../theme/layout';
 
 const PAYMENT_OPTIONS = [
   { key: 'cash', label: 'เงินสด', icon: 'cash-outline', note: 'ชำระหน้าเคาน์เตอร์' },
@@ -26,6 +27,7 @@ const PAYMENT_OPTIONS = [
 const NO_SHOW_TIMEOUT_MS = 15 * 60 * 1000;
 
 export default function QueueManagement() {
+  const { menuMaxWidth, gutter } = useLayout();
   const [queues, setQueues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -363,7 +365,10 @@ export default function QueueManagement() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollFlex}
+        contentContainerStyle={[styles.scrollContent, { maxWidth: menuMaxWidth, paddingHorizontal: gutter }]}
+      >
       {/* เปิด/ปิดรับคิว */}
       <View style={styles.acceptRow}>
         <View>
@@ -654,7 +659,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginHorizontal: 16,
+    marginHorizontal: 0,
     marginTop: 16,
     padding: 14,
     borderRadius: 16,
@@ -668,17 +673,17 @@ const styles = StyleSheet.create({
   acceptToggleOn: { backgroundColor: adminTheme.danger },
   acceptToggleOff: { backgroundColor: adminTheme.cta },
   acceptToggleText: { fontSize: 13, fontWeight: '800', color: '#fff' },
-  statsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 16 },
+  statsRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', paddingTop: 16 },
   statBox: { flex: 1, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 10, backgroundColor: 'rgba(255,255,255,0.07)' },
   statNum: { fontSize: 22, fontWeight: '800', color: colors.primaryGlow },
   statLabel: { fontSize: 11, color: adminTheme.textMuted, marginTop: 3 },
-  actionRow: { flexDirection: 'row', gap: 10, alignItems: 'center', paddingHorizontal: 16, paddingTop: 12 },
+  actionRow: { flexDirection: 'row', gap: 10, alignItems: 'center', paddingTop: 12 },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: adminTheme.cta, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 },
   addBtnText: { color: adminTheme.ctaText, fontSize: 13, fontWeight: '700' },
   resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: adminTheme.border, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 },
   resetBtnText: { color: adminTheme.textMuted, fontSize: 13, fontWeight: '700' },
   scheduledSection: {
-    marginHorizontal: 16, marginTop: 14, borderRadius: 16,
+    marginTop: 14, borderRadius: 16,
     backgroundColor: adminTheme.surface, borderWidth: 1, borderColor: adminTheme.border, overflow: 'hidden',
   },
   scheduledHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14 },
@@ -696,7 +701,7 @@ const styles = StyleSheet.create({
   scheduledItems: { color: adminTheme.textMuted, fontSize: 12, marginTop: 3, lineHeight: 16 },
   scheduledActions: { flexDirection: 'row', gap: 6 },
   scrollFlex: { flex: 1 },
-  scrollContent: { paddingBottom: 24 },
+  scrollContent: { paddingBottom: 24, width: '100%', alignSelf: 'center' },
   stickyFilterBar: {
     backgroundColor: adminTheme.bg,
     paddingTop: 10,
@@ -705,16 +710,16 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-  realtimeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 4 },
+  realtimeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingBottom: 4 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: adminTheme.cta },
   realtimeText: { fontSize: 12, color: adminTheme.cta, fontWeight: '600' },
-  filterScroll: { paddingHorizontal: 16 },
+  filterScroll: {},
   filters: { flexDirection: 'row', gap: 8, paddingVertical: 8 },
   filterBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: adminTheme.surface },
   filterBtnActive: { backgroundColor: adminTheme.accent },
   filterText: { fontSize: 13, color: adminTheme.textMuted, fontWeight: '500' },
   filterTextActive: { color: '#fff' },
-  list: { paddingHorizontal: 16, paddingTop: 8 },
+  list: { paddingTop: 8 },
   empty: { textAlign: 'center', color: adminTheme.textMuted, fontSize: 15, marginTop: 60 },
   card: { backgroundColor: adminTheme.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: adminTheme.border, gap: 12 },
   numBadge: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
@@ -735,7 +740,7 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalBox: {
     backgroundColor: adminTheme.surface, borderRadius: 24, padding: 24, maxHeight: '90%',
-    width: '100%', maxWidth: APP_MAX_WIDTH, alignSelf: 'center',
+    width: '100%', maxWidth: MODAL_MAX_WIDTH, alignSelf: 'center',
   },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: adminTheme.text, marginBottom: 4 },
   modalSub: { fontSize: 13, color: adminTheme.textMuted, marginBottom: 16 },

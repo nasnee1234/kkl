@@ -26,7 +26,8 @@ import SelectField from '../components/SelectField';
 import ScreenHeader from '../components/ScreenHeader';
 import PatternBackground from '../components/PatternBackground';
 import FadeInView from '../components/FadeInView';
-import { colors, shadows, APP_MAX_WIDTH } from '../theme/colors';
+import { colors, shadows } from '../theme/colors';
+import { MODAL_MAX_WIDTH, useLayout } from '../theme/layout';
 import { fonts } from '../theme/fonts';
 
 const STATUS_COPY = {
@@ -41,6 +42,8 @@ export default function QueueRequest() {
     callingNumber, queueProgress, acceptingQueue,
     myScheduledQueues, addScheduledQueue, removeScheduledQueue,
   } = useQueue();
+  const { stackMaxWidth, gutter } = useLayout();
+  const contentStyle = [styles.content, { maxWidth: stackMaxWidth, paddingHorizontal: gutter }];
   const [receiptVisible, setReceiptVisible] = useState(false);
   const [bookingQuick, setBookingQuick] = useState(false);
   const [closedPopupVisible, setClosedPopupVisible] = useState(false);
@@ -223,7 +226,7 @@ export default function QueueRequest() {
   if (!myQueue) {
     return (
       <PatternBackground>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>
           <ScreenHeader title="คิวของฉัน" />
 
           <FadeInView delay={60}>
@@ -400,7 +403,7 @@ export default function QueueRequest() {
   if (status === 'waiting') {
     return (
       <PatternBackground>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>
           <ScreenHeader title="คิวของฉัน" />
 
           {preWarning && (
@@ -498,7 +501,7 @@ export default function QueueRequest() {
 
   return (
     <PatternBackground>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>
         <ScreenHeader title="คิวของฉัน" />
         <FadeInView delay={60}>
         <View style={styles.statusCard}>
@@ -551,7 +554,7 @@ export default function QueueRequest() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: 18, paddingTop: 52, paddingBottom: 118 },
+  content: { paddingTop: 52, paddingBottom: 118, width: '100%', alignSelf: 'center' },
 
   noTicketCard: {
     backgroundColor: colors.card, borderRadius: 28, padding: 26, paddingBottom: 30,
@@ -619,7 +622,7 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   bookingBox: {
     backgroundColor: colors.cream, borderRadius: 26, padding: 24, maxHeight: '88%',
-    width: '100%', maxWidth: APP_MAX_WIDTH, alignSelf: 'center', ...shadows.lg,
+    width: '100%', maxWidth: MODAL_MAX_WIDTH, alignSelf: 'center', ...shadows.lg,
   },
   modalTitle: { fontFamily: fonts.heading, fontSize: 21, color: colors.textDark, marginBottom: 16 },
   bookingList: { maxHeight: 280 },

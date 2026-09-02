@@ -16,6 +16,7 @@ import { getLocalMenuImage } from '../assets/menuImages';
 import ScreenHeader from '../components/ScreenHeader';
 import PatternBackground from '../components/PatternBackground';
 import { colors, shadows } from '../theme/colors';
+import { useLayout } from '../theme/layout';
 import { fonts } from '../theme/fonts';
 
 function FoodThumb({ item }) {
@@ -50,6 +51,7 @@ function FoodThumb({ item }) {
 }
 
 export default function FoodMenu() {
+  const { menuColumns, menuMaxWidth, gutter } = useLayout();
   const [menus, setMenus] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -88,7 +90,11 @@ export default function FoodMenu() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        // numColumns เปลี่ยนกลางคันไม่ได้ ต้องบังคับ remount ด้วย key ตอนหมุนจอ/ย่อขยายหน้าต่าง
+        key={`cols-${menuColumns}`}
+        numColumns={menuColumns}
+        columnWrapperStyle={menuColumns > 1 ? styles.columnWrapper : undefined}
+        contentContainerStyle={[styles.list, { maxWidth: menuMaxWidth, paddingHorizontal: gutter }]}
         ListHeaderComponent={
           <View>
             <ScreenHeader title="เมนูทั้งร้าน" style={styles.menuHeader} />
@@ -110,10 +116,10 @@ export default function FoodMenu() {
           </Text>
         }
         renderItem={({ item }) => (
-          <View style={styles.row}>
+          <View style={[styles.row, menuColumns > 1 && styles.rowGrid]}>
             <FoodThumb item={item} />
             <View style={styles.foodInfo}>
-              <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
+              <Text style={styles.foodName} numberOfLines={2}>{item.name}</Text>
               <Text style={styles.price}>฿{item.price}</Text>
             </View>
           </View>
@@ -126,7 +132,7 @@ export default function FoodMenu() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cream },
-  menuHeader: { marginTop: 52, marginHorizontal: 18 },
+  menuHeader: { marginTop: 52 },
   searchBox: {
     height: 54,
     borderRadius: 999,
@@ -135,13 +141,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     gap: 11,
-    marginHorizontal: 18,
     borderWidth: 1,
     borderColor: colors.border,
     ...shadows.sm,
   },
   searchInput: { flex: 1, fontFamily: fonts.body, color: colors.textDark, fontSize: 14 },
-  list: { paddingHorizontal: 18, paddingBottom: 118 },
+  list: { paddingBottom: 118, width: '100%', alignSelf: 'center' },
+  columnWrapper: { gap: 16 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -154,6 +160,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadows.sm,
   },
+  rowGrid: { flex: 1, minWidth: 0 },
   foodImage: { width: 82, height: 82, borderRadius: 18, backgroundColor: colors.creamSoft },
   artBox: {
     width: 82, height: 82, borderRadius: 18, backgroundColor: colors.creamSoft,

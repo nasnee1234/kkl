@@ -5,6 +5,7 @@ import { useQueue } from '../contexts/QueueContext';
 import ScreenHeader from '../components/ScreenHeader';
 import PatternBackground from '../components/PatternBackground';
 import { colors, shadows } from '../theme/colors';
+import { useLayout } from '../theme/layout';
 import { fonts } from '../theme/fonts';
 
 const TONE = {
@@ -22,6 +23,7 @@ function toneFor(message) {
 
 export default function Notifications() {
   const { notifications, markNotificationsRead } = useQueue();
+  const { stackMaxWidth, gutter } = useLayout();
 
   useEffect(() => {
     return () => markNotificationsRead();
@@ -30,7 +32,7 @@ export default function Notifications() {
 
   return (
     <PatternBackground>
-      <View style={styles.headerWrap}>
+      <View style={[styles.headerWrap, { maxWidth: stackMaxWidth, paddingHorizontal: gutter }]}>
         <ScreenHeader
           title="แจ้งเตือน"
           right={
@@ -44,7 +46,7 @@ export default function Notifications() {
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { maxWidth: stackMaxWidth, paddingHorizontal: gutter }]}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="notifications-off-outline" size={40} color={colors.textMuted} />
@@ -78,9 +80,9 @@ export default function Notifications() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  headerWrap: { paddingTop: 52, paddingHorizontal: 18 },
+  headerWrap: { paddingTop: 52, width: '100%', alignSelf: 'center' },
   readAll: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.primaryDeep },
-  list: { paddingHorizontal: 18, paddingBottom: 118, flexGrow: 1 },
+  list: { paddingBottom: 118, flexGrow: 1, width: '100%', alignSelf: 'center' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 80, gap: 10 },
   emptyText: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 14 },
   row: {

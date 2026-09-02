@@ -14,7 +14,8 @@ import { useQueue } from '../contexts/QueueContext';
 import ScreenHeader from '../components/ScreenHeader';
 import PatternBackground from '../components/PatternBackground';
 import FadeInView from '../components/FadeInView';
-import { colors, shadows, APP_MAX_WIDTH } from '../theme/colors';
+import { colors, shadows } from '../theme/colors';
+import { MODAL_MAX_WIDTH, useLayout } from '../theme/layout';
 import { fonts } from '../theme/fonts';
 
 const SHOP_PHONE = '0812773375';
@@ -23,6 +24,7 @@ const SHOP_PHONE_LABEL = '081-277-3375';
 export default function MyProfile() {
   const navigation = useNavigation();
   const { soundEnabled, vibrateEnabled, preAlertEnabled, toggleSound, toggleVibrate, togglePreAlert } = useQueue();
+  const { stackMaxWidth, gutter } = useLayout();
   const [helpOpen, setHelpOpen] = useState(false);
 
   const toggles = [
@@ -37,7 +39,7 @@ export default function MyProfile() {
 
   return (
     <PatternBackground>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: stackMaxWidth, paddingHorizontal: gutter }]}>
         <ScreenHeader title="ฉัน" />
 
       <FadeInView delay={70} style={styles.card}>
@@ -120,7 +122,7 @@ export default function MyProfile() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 18, paddingTop: 52, paddingBottom: 118 },
+  content: { paddingTop: 52, paddingBottom: 118, width: '100%', alignSelf: 'center' },
 
   card: {
     backgroundColor: colors.card, borderRadius: 28, overflow: 'hidden',
@@ -142,7 +144,7 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(26,24,21,0.55)', justifyContent: 'flex-end' },
   modalBox: {
     backgroundColor: colors.card, borderRadius: 28, padding: 26,
-    width: '100%', maxWidth: APP_MAX_WIDTH, alignSelf: 'center', ...shadows.lg,
+    width: '100%', maxWidth: MODAL_MAX_WIDTH, alignSelf: 'center', ...shadows.lg,
   },
   modalTitle: { fontFamily: fonts.heading, fontSize: 20, color: colors.textDark, marginBottom: 16 },
 

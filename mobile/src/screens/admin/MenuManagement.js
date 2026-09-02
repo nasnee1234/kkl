@@ -12,7 +12,8 @@ import { db } from '../../config/firebase';
 import { getMenuImageUrl } from '../../utils/imageUrls';
 import { MENU_IMAGE_MAP, MENU_IMAGE_KEYS, getLocalMenuImage } from '../../assets/menuImages';
 import AnimatedPressable from '../../components/AnimatedPressable';
-import { adminTheme, APP_MAX_WIDTH } from '../../theme/colors';
+import { adminTheme } from '../../theme/colors';
+import { MODAL_MAX_WIDTH, useLayout } from '../../theme/layout';
 
 const EMPTY_FORM = { name: '', price: '', imageKey: '', emoji: '🍗' };
 
@@ -48,6 +49,7 @@ function MenuPreview({ item }) {
 }
 
 export default function MenuManagement() {
+  const { menuMaxWidth, gutter } = useLayout();
   const [menus, setMenus] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -152,7 +154,7 @@ export default function MenuManagement() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { maxWidth: menuMaxWidth, paddingHorizontal: gutter }]}>
         <Text style={styles.count}>ทั้งหมด {menus.length} รายการ</Text>
         <AnimatedPressable style={styles.addBtn} onPress={openAdd}>
           <Ionicons name="add" size={20} color={adminTheme.ctaText} />
@@ -163,7 +165,7 @@ export default function MenuManagement() {
       <FlatList
         data={menus}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { maxWidth: menuMaxWidth, paddingHorizontal: gutter }]}
         ListEmptyComponent={<Text style={styles.empty}>ยังไม่มีเมนู กด "เพิ่มเมนู" เพื่อเริ่มต้น</Text>}
         renderItem={({ item }) => (
           <View style={styles.card}>
@@ -314,11 +316,11 @@ export default function MenuManagement() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: adminTheme.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: adminTheme.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, width: '100%', alignSelf: 'center' },
   count: { fontSize: 14, color: adminTheme.textMuted, fontWeight: '500' },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: adminTheme.cta, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 },
   addBtnText: { color: adminTheme.ctaText, fontWeight: '700', fontSize: 14 },
-  list: { paddingHorizontal: 16, paddingBottom: 24 },
+  list: { paddingBottom: 24, width: '100%', alignSelf: 'center' },
   empty: { textAlign: 'center', color: adminTheme.textMuted, marginTop: 60, fontSize: 14 },
   card: {
     backgroundColor: adminTheme.surface, borderRadius: 16, padding: 14, flexDirection: 'row',
@@ -344,7 +346,7 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalBox: {
     backgroundColor: adminTheme.surface, borderRadius: 24, padding: 24, maxHeight: '90%',
-    width: '100%', maxWidth: APP_MAX_WIDTH, alignSelf: 'center',
+    width: '100%', maxWidth: MODAL_MAX_WIDTH, alignSelf: 'center',
   },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: adminTheme.text, marginBottom: 16 },
   fieldBox: { marginBottom: 14 },

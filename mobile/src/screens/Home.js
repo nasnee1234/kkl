@@ -11,6 +11,7 @@ import { getLocalMenuImage } from '../assets/menuImages';
 import PatternBackground from '../components/PatternBackground';
 import FadeInView from '../components/FadeInView';
 import { colors, shadows } from '../theme/colors';
+import { useLayout } from '../theme/layout';
 import { fonts } from '../theme/fonts';
 
 const SHOP_MAPS_URL = 'https://maps.app.goo.gl/wEDXyVi2cpxwD5Kc6';
@@ -49,6 +50,7 @@ function BestSellerImage({ item }) {
 export default function Home() {
   const navigation = useNavigation();
   const { myQueue, callingNumber, acceptingQueue, queueProgress } = useQueue();
+  const { stackMaxWidth, gutter } = useLayout();
   const [menus, setMenus] = useState([]);
 
   useEffect(() => {
@@ -64,7 +66,10 @@ export default function Home() {
 
   return (
     <PatternBackground>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { maxWidth: stackMaxWidth, paddingHorizontal: gutter }]}
+        showsVerticalScrollIndicator={false}
+      >
         <FadeInView delay={0}>
           <View style={styles.topRow}>
             <View style={{ flex: 1 }}>
@@ -176,7 +181,7 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: 18, paddingTop: 52, paddingBottom: 118 },
+  content: { paddingTop: 52, paddingBottom: 118, width: '100%', alignSelf: 'center' },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
   eyebrow: { fontFamily: fonts.bodySemiBold, fontSize: 12, letterSpacing: 1.6, textTransform: 'uppercase', color: colors.primaryDeep },
   title: { fontFamily: fonts.heading, fontSize: 26, lineHeight: 30, color: colors.textDark, marginTop: 4 },

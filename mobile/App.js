@@ -31,7 +31,8 @@ import QueueManagement from './src/screens/admin/QueueManagement';
 import ConfirmDialog from './src/components/ConfirmDialog';
 import { QueueProvider, useQueue } from './src/contexts/QueueContext';
 import { auth } from './src/config/firebase';
-import { colors, adminTheme, APP_MAX_WIDTH } from './src/theme/colors';
+import { colors, adminTheme } from './src/theme/colors';
+import { APP_MAX_WIDTH } from './src/theme/layout';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();

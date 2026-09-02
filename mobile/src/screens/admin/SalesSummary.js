@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { colors, adminTheme, APP_MAX_WIDTH } from '../../theme/colors';
-
-// จำกัดไม่ให้เกินความกว้างจริงของแอป (คอลัมน์กลางจอบนเว็บ) เพราะ Dimensions.get('window')
-// รายงานความกว้างเบราว์เซอร์ทั้งหมด ไม่ใช่ความกว้างที่แอปแสดงจริง
-const width = Math.min(Dimensions.get('window').width, APP_MAX_WIDTH);
+import { colors, adminTheme } from '../../theme/colors';
+import { useLayout } from '../../theme/layout';
 
 const TABS = [
   { key: 'daily',   label: 'วัน' },
@@ -104,6 +101,7 @@ function BarChart({ data }) {
 }
 
 export default function SalesSummary() {
+  const { menuMaxWidth, gutter } = useLayout();
   const [activeTab, setActiveTab] = useState('daily');
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +144,10 @@ export default function SalesSummary() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { maxWidth: menuMaxWidth, paddingHorizontal: gutter }]}
+    >
       {/* Realtime badge */}
       <View style={styles.realtimeBadge}>
         <View style={styles.dot} />
@@ -247,7 +248,7 @@ export default function SalesSummary() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: adminTheme.bg },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { paddingVertical: 16, paddingBottom: 32, width: '100%', alignSelf: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: adminTheme.bg },
   realtimeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: adminTheme.cta },
@@ -265,7 +266,8 @@ const styles = StyleSheet.create({
   yearArrowDisabled: { opacity: 0.4 },
   yearLabel: { fontSize: 15, fontWeight: '800', color: adminTheme.text, minWidth: 90, textAlign: 'center' },
   cards: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
-  card: { width: (width - 42) / 2, borderRadius: 16, padding: 16, gap: 6 },
+  // ยืดเองตามที่ว่าง — จอแคบได้ 2 ใบต่อแถว จอกว้างเรียงได้ 4 ใบ โดยไม่ต้องคำนวณจากความกว้างจอ
+  card: { flexGrow: 1, flexBasis: 150, minWidth: 150, borderRadius: 16, padding: 16, gap: 6 },
   cardLabel: { fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
   cardValue: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
   section: { backgroundColor: adminTheme.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: adminTheme.border },
