@@ -51,7 +51,8 @@ export async function exchangeLineCode(req: Request, res: Response) {
     const uid = `line:${profile.sub}`;
     const customToken = await auth.createCustomToken(uid);
     res.json({ customToken, name: profile.name || '', picture: profile.picture || null });
-  } catch (e) {
-    res.status(500).json({ error: 'LINE_EXCHANGE_ERROR' });
+  } catch (e: any) {
+    console.error('LINE_EXCHANGE_ERROR', e);
+    res.status(500).json({ error: 'LINE_EXCHANGE_ERROR', detail: e?.message || String(e) });
   }
 }
