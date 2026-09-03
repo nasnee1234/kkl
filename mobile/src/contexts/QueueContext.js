@@ -30,11 +30,28 @@ export function QueueProvider({ children }) {
   const lastCallingAtRef = useRef(null); // เวลาที่ "เรียก" ครั้งล่าสุดที่เด้งแจ้งเตือนไปแล้ว กันเด้งซ้ำจาก snapshot เดิม
   const preWarnedRef = useRef(false); // กันยิงเตือนล่วงหน้าซ้ำระหว่างที่ยังห่างกัน 2 คิวอยู่
 
-  const pushNotification = (message) => {
+  // receipt (ถ้ามี) แนบไว้กับแจ้งเตือน "รับของเสร็จ" ให้กดย้อนดูใบเสร็จได้ทีหลังจากหน้าแจ้งเตือน
+  const pushNotification = (message, receipt = null) => {
     setNotifications((prev) => [
-      { id: `${Date.now()}-${Math.random()}`, message, time: new Date(), read: false },
+      { id: `${Date.now()}-${Math.random()}`, message, time: new Date(), read: false, receipt },
       ...prev,
     ]);
+  };
+
+  // แปลง doc คิว/ออเดอร์ที่เพิ่งเสร็จให้เป็นข้อมูลใบเสร็จ เก็บไว้ในตัวแจ้งเตือนเลย เผื่อกดย้อนดูทีหลัง
+  // (ไม่พึ่งพา myQueue/myScheduledQueues เพราะพอ "เสร็จ" แล้วรายการนั้นจะถูกลบออกจาก state เดิมทันที)
+  const buildReceipt = (data) => {
+    if (!(data.saleAmount > 0)) return null;
+    const doneTime = data.doneAt?.toDate
+      ? data.doneAt.toDate().toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : new Date().toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return {
+      queueNumber: data.number ?? null,
+      amount: data.saleAmount,
+      paymentMethod: data.paymentMethod,
+      paidAt: doneTime,
+      lines: data.items?.map((i) => ({ left: `${i.name} × ${i.qty}`, right: `฿${i.price * i.qty}` })) || [],
+    };
   };
 
   const markNotificationsRead = () => {
@@ -131,7 +148,7 @@ export function QueueProvider({ children }) {
           setCallAlert(true);
           pushNotification(`🔔 ถึงคิวของคุณแล้ว! หมายเลข ${data.number} กรุณามาที่เคาน์เตอร์`);
         } else if (prevStatusRef.current !== 'done' && newStatus === 'done') {
-          pushNotification(`✅ คิวหมายเลข ${data.number} เสร็จสิ้นแล้ว ขอบคุณที่ใช้บริการ`);
+          pushNotification(`✅ คิวหมายเลข ${data.number} เสร็จสิ้นแล้ว ขอบคุณที่ใช้บริการ`, buildReceipt(data));
         } else if (prevStatusRef.current === 'scheduled' && newStatus === 'waiting') {
           pushNotification(`📋 ถึงวันนัดแล้ว! คิวของคุณคือหมายเลข ${data.number}`);
         }
@@ -164,7 +181,7 @@ export function QueueProvider({ children }) {
           }
           if (data.status === 'done') {
             if (prevStatus !== 'done') {
-              pushNotification('✅ รับออเดอร์เรียบร้อยแล้ว ขอบคุณที่ใช้บริการ');
+              pushNotification('✅ รับออเดอร์เรียบร้อยแล้ว ขอบคุณที่ใช้บริการ', buildReceipt(data));
             }
             return prev.filter((q) => q.id !== id);
           }

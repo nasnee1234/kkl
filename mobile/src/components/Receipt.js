@@ -16,7 +16,8 @@ function refNumber(queueNumber, paidAt) {
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
   const d = String(now.getDate()).padStart(2, '0');
-  return `KM-${y}${m}${d}-${formatQueueLabel(queueNumber)}`;
+  const tail = queueNumber != null ? formatQueueLabel(queueNumber) : 'PO';
+  return `KM-${y}${m}${d}-${tail}`;
 }
 
 // เต็มจอสีเขียว accent-2 ตามดีไซน์ต้นแบบ — ใช้แสดงตอนลูกค้ากดดูใบเสร็จ
@@ -34,7 +35,7 @@ export default function Receipt({ queueNumber, amount, paidAt, paymentMethod, li
       <View style={styles.card}>
         <View style={styles.cardTop}>
           <Text style={styles.cardTitle}>ใบเสร็จ</Text>
-          <Text style={styles.cardNumber}>{formatQueueLabel(queueNumber)}</Text>
+          <Text style={styles.cardNumber}>{queueNumber != null ? formatQueueLabel(queueNumber) : 'สั่งล่วงหน้า'}</Text>
         </View>
         <Text style={styles.refText}>{refNumber(queueNumber, paidAt)} · {paidAt}</Text>
 
