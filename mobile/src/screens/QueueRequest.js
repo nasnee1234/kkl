@@ -68,9 +68,15 @@ export default function QueueRequest() {
 
   useEffect(() => {
     const q = query(collection(db, 'menus'), orderBy('createdAt', 'asc'));
-    const unsub = onSnapshot(q, (snap) => {
-      setMenus(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        setMenus(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      },
+      (err) => {
+        console.error('[menus] onSnapshot error:', err);
+      }
+    );
     return unsub;
   }, []);
 
@@ -350,6 +356,7 @@ export default function QueueRequest() {
         <Modal visible={bookingModalVisible} transparent animationType="slide">
           <View style={styles.overlay}>
             <View style={styles.bookingBox}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {bookingStep === 'verify' ? (
                 <>
                   <Text style={styles.modalTitle}>ยืนยันตัวตนก่อนสั่ง</Text>
@@ -391,7 +398,7 @@ export default function QueueRequest() {
                     onChangeText={setCustomerNameInput}
                   />
 
-                  <ScrollView style={styles.bookingList} keyboardShouldPersistTaps="handled">
+                  <View style={styles.bookingList}>
                     {menus.length === 0 ? (
                       <Text style={styles.bookingEmpty}>ยังไม่มีเมนู</Text>
                     ) : (
@@ -413,7 +420,7 @@ export default function QueueRequest() {
                         </View>
                       ))
                     )}
-                  </ScrollView>
+                  </View>
 
                   <Text style={styles.sectionLabel}>วันและเวลา</Text>
 
@@ -470,6 +477,7 @@ export default function QueueRequest() {
                   </TouchableOpacity>
                 </>
               )}
+            </ScrollView>
             </View>
           </View>
         </Modal>
@@ -705,7 +713,7 @@ const styles = StyleSheet.create({
     width: '100%', maxWidth: MODAL_MAX_WIDTH, alignSelf: 'center', ...shadows.lg,
   },
   modalTitle: { fontFamily: fonts.heading, fontSize: 21, color: colors.textDark, marginBottom: 16 },
-  bookingList: { maxHeight: 280 },
+  bookingList: { gap: 2 },
   bookingEmpty: { textAlign: 'center', color: colors.textMuted, paddingVertical: 20 },
   bookingRow: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
