@@ -234,7 +234,7 @@ export default function SalesSummary() {
               <View style={styles.saleInfo}>
                 <Text style={styles.saleName}>{s.customerName || 'ลูกค้า'}</Text>
                 <Text style={styles.saleTime}>
-                  คิว #{s.queueNumber} · {s.date.toLocaleString('th-TH', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
+                  {s.queueNumber ? `คิว #${s.queueNumber}` : 'ออเดอร์สั่งล่วงหน้า'} · {s.date.toLocaleString('th-TH', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
                 </Text>
               </View>
               <Text style={styles.saleAmount}>฿{s.amount.toLocaleString()}</Text>

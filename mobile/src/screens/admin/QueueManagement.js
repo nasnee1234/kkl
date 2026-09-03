@@ -228,7 +228,8 @@ export default function QueueManagement() {
           amount,
           paymentMethod,
           queueId: pendingDone.id,
-          queueNumber: pendingDone.number,
+          // ออเดอร์สั่งล่วงหน้าไม่มีเลขคิว — addDoc พังทันทีถ้าส่ง field เป็น undefined ต้องใส่ null แทน
+          queueNumber: pendingDone.number ?? null,
           customerName: pendingDone.customerName,
           createdAt: serverTimestamp(),
         });
@@ -542,7 +543,9 @@ export default function QueueManagement() {
         <View style={styles.overlay}>
           <ScrollView style={styles.modalBox} keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>บันทึกยอดขาย</Text>
-            <Text style={styles.modalSub}>คิว #{pendingDone?.number} — {pendingDone?.customerName}</Text>
+            <Text style={styles.modalSub}>
+              {pendingDone?.number ? `คิว #${pendingDone.number}` : 'ออเดอร์สั่งล่วงหน้า'} — {pendingDone?.customerName}
+            </Text>
             <Text style={styles.fieldLabel}>ยอดขาย (บาท)</Text>
             <TextInput
               style={styles.fieldInput}
