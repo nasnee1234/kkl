@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useCallback } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useQueue } from '../contexts/QueueContext';
 import ScreenHeader from '../components/ScreenHeader';
 import PatternBackground from '../components/PatternBackground';
@@ -25,10 +26,14 @@ export default function Notifications() {
   const { notifications, markNotificationsRead } = useQueue();
   const { stackMaxWidth, gutter } = useLayout();
 
-  useEffect(() => {
-    return () => markNotificationsRead();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // อ่านทันทีที่เข้ามาหน้านี้ (ไม่ใช่ตอนออกจากหน้า) — ตราบใดที่ user เห็นหน้านี้ถือว่าอ่านแล้ว
+  // ใช้ useFocusEffect แทน useEffect เพราะแท็บนี้ถูก mount ค้างไว้ในตัว bottom tab navigator
+  // สลับแท็บไปมาไม่ทำให้ unmount ใหม่ ต้องดักตอน "โฟกัส" แทนตอน "mount"
+  useFocusEffect(
+    useCallback(() => {
+      markNotificationsRead();
+    }, [markNotificationsRead])
+  );
 
   return (
     <PatternBackground>
