@@ -29,10 +29,16 @@ service cloud.firestore {
         && noAdminOnlyFields();
     }
 
+    // สั่งล่วงหน้าต้องเข้าสู่ระบบด้วย LINE Login ก่อนเสมอ — ต่างจากกดรับคิวด่วนที่ลูกค้าต้องยืนอยู่หน้าร้านจริง
+    // อยู่แล้ว แต่สั่งล่วงหน้าร้านต้องเตรียมอาหารไว้ก่อนลูกค้ามารับ จึงกันคนสั่งกวนด้วยตัวตนปลอม/ไม่มีตัวตน
+    // เช็คว่าฟิลด์ lineUid ตรงกับ uid ที่ auth token ยืนยันมาแล้วเท่านั้น (ออกโดย backend หลังตรวจสอบกับ LINE จริง)
     function isValidPreorderCreate() {
       let d = request.resource.data;
-      return d.status == 'scheduled'
-        && d.customerName is string
+      return request.auth != null
+        && d.lineUid is string
+        && d.lineUid == request.auth.uid
+        && d.status == 'scheduled'
+        && d.customerName is string && d.customerName.size() > 0
         && d.items is list
         && d.createdAt is timestamp
         && d.pickupDate is string

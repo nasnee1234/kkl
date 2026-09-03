@@ -13,4 +13,8 @@ export const env = {
     privateKey: process.env.VAPID_PRIVATE_KEY || '',
     subject: process.env.VAPID_SUBJECT || '',
   },
+  line: {
+    channelId: process.env.LINE_LOGIN_CHANNEL_ID || '',
+    channelSecret: process.env.LINE_LOGIN_CHANNEL_SECRET || '',
+  },
 };

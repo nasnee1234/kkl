@@ -6,16 +6,18 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useQueue } from '../contexts/QueueContext';
-import { db } from '../config/firebase';
+import { auth, db } from '../config/firebase';
 import { createQueueWithNumber, createScheduledQueue, formatQueueLabel, toLocalDateStr } from '../utils/queueNumbers';
 import { getTimeOptions, formatPickupDateLabel, MONTH_OPTIONS, getDayOptions, buildPickupDate } from '../utils/pickupSchedule';
 import { registerForPushNotifications } from '../utils/notifications';
+import { isLineVerified, loginWithLine, lineAuthErrorMessage } from '../utils/lineAuth';
 import AnimatedPressable from '../components/AnimatedPressable';
 import ProgressRing from '../components/ProgressRing';
 import Receipt from '../components/Receipt';
@@ -55,6 +57,12 @@ export default function QueueRequest() {
   const [pickupDate, setPickupDate] = useState(toLocalDateStr());
   const [pickupTime, setPickupTime] = useState('');
   const [bookingSaving, setBookingSaving] = useState(false);
+  const [customerNameInput, setCustomerNameInput] = useState('');
+
+  // ยืนยันตัวตนด้วย LINE Login ก่อนสั่งล่วงหน้า — ยืนยันครั้งเดียวต่อเครื่อง ใช้ได้ทุกออเดอร์ถัดไป
+  const [bookingStep, setBookingStep] = useState('verify'); // 'verify' | 'order'
+  const [lineLoading, setLineLoading] = useState(false);
+  const [lineError, setLineError] = useState('');
 
   const timeOptions = getTimeOptions(pickupDate);
 
@@ -118,20 +126,44 @@ export default function QueueRequest() {
     const firstDate = toLocalDateStr();
     setPickupDate(firstDate);
     setPickupTime(getTimeOptions(firstDate)[0]?.value || '');
+    setLineError('');
+    setCustomerNameInput('');
+    setBookingStep(isLineVerified() ? 'order' : 'verify');
     setBookingModalVisible(true);
   };
 
+  const handleLineLogin = async () => {
+    setLineLoading(true);
+    setLineError('');
+    try {
+      const profile = await loginWithLine();
+      if (profile.name) setCustomerNameInput((prev) => prev || profile.name);
+      setBookingStep('order');
+    } catch (e) {
+      setLineError(lineAuthErrorMessage(e));
+    } finally {
+      setLineLoading(false);
+    }
+  };
+
   const handleBookingConfirm = async () => {
-    if (bookingSaving || selectedItems.length === 0 || !pickupTime) return;
+    const customerName = customerNameInput.trim();
+    if (bookingSaving || selectedItems.length === 0 || !pickupTime || !customerName) return;
+    const lineUid = auth.currentUser?.uid;
+    if (!lineUid || !isLineVerified()) {
+      setBookingStep('verify');
+      return;
+    }
     setBookingSaving(true);
     try {
       const { pushToken, webPushSubscription } = await registerForPushNotifications();
       const baseData = {
-        customerName: 'ลูกค้า',
+        customerName,
         items: selectedItems,
         pickupDate,
         pickupTime,
         phone: null,
+        lineUid,
         pushToken: pushToken || null,
         webPushSubscription: webPushSubscription || null,
       };
@@ -318,78 +350,126 @@ export default function QueueRequest() {
         <Modal visible={bookingModalVisible} transparent animationType="slide">
           <View style={styles.overlay}>
             <View style={styles.bookingBox}>
-              <Text style={styles.modalTitle}>สั่งออเดอร์ล่วงหน้า + เลือกเมนู</Text>
-
-              <ScrollView style={styles.bookingList} keyboardShouldPersistTaps="handled">
-                {menus.length === 0 ? (
-                  <Text style={styles.bookingEmpty}>ยังไม่มีเมนู</Text>
-                ) : (
-                  menus.map((item) => (
-                    <View key={item.id} style={styles.bookingRow}>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={styles.bookingItemName} numberOfLines={1}>{item.name}</Text>
-                        <Text style={styles.bookingItemPrice}>฿{item.price}</Text>
-                      </View>
-                      <View style={styles.stepper}>
-                        <TouchableOpacity style={styles.stepperBtn} onPress={() => updateQty(item.id, -1)}>
-                          <Ionicons name="remove" size={14} color={colors.textDark} />
-                        </TouchableOpacity>
-                        <Text style={styles.stepperQty}>{cartQty[item.id] || 0}</Text>
-                        <TouchableOpacity style={[styles.stepperBtn, styles.stepperBtnAdd]} onPress={() => updateQty(item.id, 1)}>
-                          <Ionicons name="add" size={14} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))
-                )}
-              </ScrollView>
-
-              <Text style={styles.sectionLabel}>วันและเวลา</Text>
-
-              <View style={styles.selectRow}>
-                <SelectField options={dayOptions} value={pickupDayStr} onChange={changeDay} />
-                <SelectField options={MONTH_OPTIONS} value={String(pickupMonthNum).padStart(2, '0')} onChange={changeMonth} />
-              </View>
-
-              {timeOptions.length > 0 ? (
-                <View style={[styles.selectRow, { marginTop: 8, alignItems: 'center' }]}>
-                  <SelectField options={hourOptions} value={currentHour} onChange={changeHour} />
-                  <Text style={styles.timeColon}>:</Text>
-                  <SelectField options={minuteOptions} value={pickupTime.split(':')[1] || ''} onChange={changeMinute} />
-                </View>
-              ) : (
-                <View style={styles.timeEmptyBox}>
-                  <Text style={styles.timeEmptyText}>หมดเวลาสำหรับวันนี้แล้ว เลือกวันอื่นได้เลย</Text>
-                </View>
-              )}
-
-              {pickupTime ? (
-                <Text style={styles.selectedSummary}>
-                  เลือกแล้ว: {formatPickupDateLabel(pickupDate)} เวลา {pickupTime} น.
-                </Text>
-              ) : null}
-
-              <View style={styles.bookingTotalRow}>
-                <Text style={styles.bookingTotalLabel}>ยอดรวม</Text>
-                <Text style={styles.bookingTotalValue}>฿{bookingTotal.toLocaleString()}</Text>
-              </View>
-
-              <AnimatedPressable
-                style={[styles.saveBtn, (bookingSaving || selectedItems.length === 0 || !pickupTime) && { opacity: 0.6 }]}
-                onPress={handleBookingConfirm}
-                disabled={bookingSaving || selectedItems.length === 0 || !pickupTime}
-              >
-                {bookingSaving ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.saveBtnText}>
-                    {selectedItems.length === 0 ? 'เลือกอย่างน้อย 1 เมนู' : 'ยืนยันสั่งออเดอร์'}
+              {bookingStep === 'verify' ? (
+                <>
+                  <Text style={styles.modalTitle}>ยืนยันตัวตนก่อนสั่ง</Text>
+                  <Text style={styles.otpHint}>
+                    กันการสั่งกวนโดยไม่มีตัวตนจริง เข้าสู่ระบบด้วย LINE ครั้งเดียว ใช้ได้ทุกครั้งต่อไปบนเครื่องนี้
                   </Text>
-                )}
-              </AnimatedPressable>
-              <TouchableOpacity style={styles.cancelBtn2} onPress={() => setBookingModalVisible(false)}>
-                <Text style={styles.cancelBtnText2}>ยกเลิก</Text>
-              </TouchableOpacity>
+
+                  {lineError ? <Text style={styles.otpError}>{lineError}</Text> : null}
+
+                  <AnimatedPressable
+                    style={[styles.lineBtn, lineLoading && { opacity: 0.6 }]}
+                    onPress={handleLineLogin}
+                    disabled={lineLoading}
+                  >
+                    {lineLoading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="chatbubble" size={20} color="#fff" />
+                        <Text style={styles.lineBtnText}>เข้าสู่ระบบด้วย LINE</Text>
+                      </>
+                    )}
+                  </AnimatedPressable>
+
+                  <TouchableOpacity style={styles.cancelBtn2} onPress={() => setBookingModalVisible(false)}>
+                    <Text style={styles.cancelBtnText2}>ยกเลิก</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.modalTitle}>สั่งออเดอร์ล่วงหน้า + เลือกเมนู</Text>
+
+                  <Text style={styles.sectionLabel}>ชื่อผู้สั่ง</Text>
+                  <TextInput
+                    style={styles.otpInput}
+                    placeholder="ชื่อของคุณ"
+                    placeholderTextColor={colors.textMuted}
+                    value={customerNameInput}
+                    onChangeText={setCustomerNameInput}
+                  />
+
+                  <ScrollView style={styles.bookingList} keyboardShouldPersistTaps="handled">
+                    {menus.length === 0 ? (
+                      <Text style={styles.bookingEmpty}>ยังไม่มีเมนู</Text>
+                    ) : (
+                      menus.map((item) => (
+                        <View key={item.id} style={styles.bookingRow}>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={styles.bookingItemName} numberOfLines={1}>{item.name}</Text>
+                            <Text style={styles.bookingItemPrice}>฿{item.price}</Text>
+                          </View>
+                          <View style={styles.stepper}>
+                            <TouchableOpacity style={styles.stepperBtn} onPress={() => updateQty(item.id, -1)}>
+                              <Ionicons name="remove" size={14} color={colors.textDark} />
+                            </TouchableOpacity>
+                            <Text style={styles.stepperQty}>{cartQty[item.id] || 0}</Text>
+                            <TouchableOpacity style={[styles.stepperBtn, styles.stepperBtnAdd]} onPress={() => updateQty(item.id, 1)}>
+                              <Ionicons name="add" size={14} color="#fff" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))
+                    )}
+                  </ScrollView>
+
+                  <Text style={styles.sectionLabel}>วันและเวลา</Text>
+
+                  <View style={styles.selectRow}>
+                    <SelectField options={dayOptions} value={pickupDayStr} onChange={changeDay} />
+                    <SelectField options={MONTH_OPTIONS} value={String(pickupMonthNum).padStart(2, '0')} onChange={changeMonth} />
+                  </View>
+
+                  {timeOptions.length > 0 ? (
+                    <View style={[styles.selectRow, { marginTop: 8, alignItems: 'center' }]}>
+                      <SelectField options={hourOptions} value={currentHour} onChange={changeHour} />
+                      <Text style={styles.timeColon}>:</Text>
+                      <SelectField options={minuteOptions} value={pickupTime.split(':')[1] || ''} onChange={changeMinute} />
+                    </View>
+                  ) : (
+                    <View style={styles.timeEmptyBox}>
+                      <Text style={styles.timeEmptyText}>หมดเวลาสำหรับวันนี้แล้ว เลือกวันอื่นได้เลย</Text>
+                    </View>
+                  )}
+
+                  {pickupTime ? (
+                    <Text style={styles.selectedSummary}>
+                      เลือกแล้ว: {formatPickupDateLabel(pickupDate)} เวลา {pickupTime} น.
+                    </Text>
+                  ) : null}
+
+                  <View style={styles.bookingTotalRow}>
+                    <Text style={styles.bookingTotalLabel}>ยอดรวม</Text>
+                    <Text style={styles.bookingTotalValue}>฿{bookingTotal.toLocaleString()}</Text>
+                  </View>
+
+                  <AnimatedPressable
+                    style={[
+                      styles.saveBtn,
+                      (bookingSaving || selectedItems.length === 0 || !pickupTime || !customerNameInput.trim()) && { opacity: 0.6 },
+                    ]}
+                    onPress={handleBookingConfirm}
+                    disabled={bookingSaving || selectedItems.length === 0 || !pickupTime || !customerNameInput.trim()}
+                  >
+                    {bookingSaving ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.saveBtnText}>
+                        {!customerNameInput.trim()
+                          ? 'กรอกชื่อผู้สั่ง'
+                          : selectedItems.length === 0
+                          ? 'เลือกอย่างน้อย 1 เมนู'
+                          : 'ยืนยันสั่งออเดอร์'}
+                      </Text>
+                    )}
+                  </AnimatedPressable>
+                  <TouchableOpacity style={styles.cancelBtn2} onPress={() => setBookingModalVisible(false)}>
+                    <Text style={styles.cancelBtnText2}>ยกเลิก</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
         </Modal>
@@ -644,6 +724,18 @@ const styles = StyleSheet.create({
   selectRow: { flexDirection: 'row', gap: 12 },
   timeColon: { fontFamily: fonts.bodyExtraBold, fontSize: 18, color: colors.textDark },
   selectedSummary: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, marginTop: 12 },
+  otpHint: { fontFamily: fonts.body, fontSize: 13.5, color: colors.textMuted, lineHeight: 20, marginBottom: 18 },
+  otpInput: {
+    backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+    paddingVertical: 16, paddingHorizontal: 18, fontFamily: fonts.bodyBold, fontSize: 18,
+    color: colors.textDark, letterSpacing: 2, marginBottom: 12,
+  },
+  otpError: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.danger || '#C0392B', marginBottom: 12 },
+  lineBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: '#06C755', borderRadius: 999, paddingVertical: 18, marginTop: 4,
+  },
+  lineBtnText: { fontFamily: fonts.bodyExtraBold, fontSize: 16, color: '#fff' },
   timeEmptyBox: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 20, alignItems: 'center' },
   timeEmptyText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   bookingTotalRow: {
