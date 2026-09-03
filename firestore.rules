@@ -10,18 +10,50 @@ service cloud.firestore {
         && request.auth.token.email == 'admin@gmail.com';
     }
 
+    // ฟิลด์ที่ต้องมาจากแอดมินเท่านั้น (ยอดขาย/เวลาที่แอดมินกดแต่ละสถานะ) — ลูกค้าห้ามใส่ตอนสร้างเอกสารเด็ดขาด
+    // ป้องกันการยิง request ตรงๆ (ไม่ผ่านแอป ไม่ต้องล็อกอิน) สร้างคิวปลอมที่ "เสร็จแล้ว" พร้อมยอดขายปลอมทันที
+    function noAdminOnlyFields() {
+      return !request.resource.data.keys().hasAny([
+        'saleAmount', 'paymentMethod', 'doneAt', 'callingAt',
+        'onTheWay', 'onTheWayAt', 'snoozedAt', 'readyAt'
+      ]);
+    }
+
+    function isValidQuickQueueCreate() {
+      let d = request.resource.data;
+      return d.status == 'waiting'
+        && d.customerName is string
+        && d.items is list
+        && d.createdAt is timestamp
+        && d.number is int && d.number > 0 && d.number <= 700
+        && noAdminOnlyFields();
+    }
+
+    function isValidPreorderCreate() {
+      let d = request.resource.data;
+      return d.status == 'scheduled'
+        && d.customerName is string
+        && d.items is list
+        && d.createdAt is timestamp
+        && d.pickupDate is string
+        && d.pickupTime is string
+        && !d.keys().hasAny(['number'])
+        && noAdminOnlyFields();
+    }
+
     // เมนูอาหาร: ลูกค้าดูได้โดยไม่ต้องล็อกอิน, แก้ไขได้เฉพาะแอดมิน
     match /menus/{menuId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // คิว: ลูกค้าไม่ล็อกอินก็สร้าง/อ่านคิวของตัวเองได้ (ดูสถานะแบบเรียลไทม์)
+    // คิว: ลูกค้าไม่ล็อกอินก็สร้าง/อ่านคิวของตัวเองได้ (ดูสถานะแบบเรียลไทม์) แต่ต้องตรงรูปแบบที่แอปจริงส่งเท่านั้น
+    // (กันสร้างคิวปลอมด้วย status/ยอดขายที่แต่งเอง — ดูฟังก์ชันด้านบน)
     // เปลี่ยนสถานะ/ลบคิวทำได้เฉพาะแอดมิน ยกเว้นลูกค้ายกเลิกคิวของตัวเอง (แก้ได้แค่ field status เป็น 'cancelled'
     // จากสถานะ waiting/scheduled เท่านั้น — ไม่มีระบบล็อกอินลูกค้าจึงอ้างอิงสิทธิ์ด้วย document id ที่รู้เฉพาะเจ้าของคิว)
     match /queues/{queueId} {
       allow read: if true;
-      allow create: if true;
+      allow create: if isAdmin() || isValidQuickQueueCreate() || isValidPreorderCreate();
       allow update: if isAdmin()
         // ลูกค้ายกเลิกคิว/ออเดอร์ของตัวเอง (แก้ได้แค่ field status เป็น 'cancelled')
         || (
@@ -39,9 +71,15 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // ตัวนับหมายเลขคิว: ความเสี่ยงต่ำ เปิดให้อ่าน/เขียนได้เพื่อออกเลขคิว
+    // ตัวนับหมายเลขคิว: ลูกค้าต้องนับต่อจากค่าเดิมทีละ 1 เท่านั้น (ตามธุรกรรมออกเลขคิวจริง)
+    // ห้ามรีเซ็ต/ข้าม/เขียนทับเป็นค่าใดก็ได้ตามใจชอบ — ป้องกันคนร้ายรีเซ็ตเลขคิวจริงของร้านโดยไม่ต้องล็อกอิน
     match /counters/{counterId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin() || (
+        request.resource.data.keys().hasOnly(['lastNumber', 'updatedAt']) &&
+        request.resource.data.lastNumber ==
+          (resource != null && 'lastNumber' in resource.data ? resource.data.lastNumber : 0) + 1
+      );
     }
 
     // ยอดขาย: ข้อมูลอ่อนไหว เฉพาะแอดมินเท่านั้น
