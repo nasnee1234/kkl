@@ -17,7 +17,7 @@ import { auth, db } from '../config/firebase';
 import { createQueueWithNumber, createScheduledQueue, formatQueueLabel, toLocalDateStr } from '../utils/queueNumbers';
 import { getTimeOptions, formatPickupDateLabel, MONTH_OPTIONS, getDayOptions, buildPickupDate } from '../utils/pickupSchedule';
 import { registerForPushNotifications } from '../utils/notifications';
-import { isLineVerified, loginWithLine, lineAuthErrorMessage } from '../utils/lineAuth';
+import { isLineVerified, loginWithLine, consumeLineRedirectResult, lineAuthErrorMessage } from '../utils/lineAuth';
 import AnimatedPressable from '../components/AnimatedPressable';
 import ProgressRing from '../components/ProgressRing';
 import Receipt from '../components/Receipt';
@@ -78,6 +78,27 @@ export default function QueueRequest() {
       }
     );
     return unsub;
+  }, []);
+
+  // มือถือ: กลับมาจากการ redirect ไปล็อกอิน LINE — เช็คตอนหน้าโหลดว่าเพิ่งกลับมาหรือเปล่า
+  // แล้วเปิดฟอร์มสั่งของต่อให้อัตโนมัติ (แทนที่จะให้ลูกค้าต้องกดสั่งใหม่ทั้งหมด)
+  useEffect(() => {
+    consumeLineRedirectResult()
+      .then((result) => {
+        if (!result) return;
+        if (result.name) setCustomerNameInput(result.name);
+        if (result.shouldResume) {
+          setCartQty({});
+          const firstDate = toLocalDateStr();
+          setPickupDate(firstDate);
+          setPickupTime(getTimeOptions(firstDate)[0]?.value || '');
+          setBookingStep('order');
+          setBookingModalVisible(true);
+        }
+      })
+      .catch((e) => {
+        showToast(lineAuthErrorMessage(e));
+      });
   }, []);
 
   const selectedItems = menus

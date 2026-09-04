@@ -5,16 +5,69 @@ import { API_BASE_URL } from '../config/api';
 
 // ยืนยันตัวตนคนสั่งล่วงหน้าด้วย "เข้าสู่ระบบด้วย LINE" แทนเบอร์โทร+OTP — ฟรี ไม่ต้องเปิดบิลลิ่ง Firebase
 // และคนไทยส่วนใหญ่คุ้นเคยกับการล็อกอิน LINE อยู่แล้ว บัญชี LINE จริงพิสูจน์ตัวตนได้แน่นหนากว่าเบอร์ที่พิมพ์เอง
-// เปิดหน้า LINE ใน popup แทนการ redirect เต็มหน้า เพื่อไม่ให้ข้อมูลที่กรอกในฟอร์มสั่งของหายระหว่างล็อกอิน
+//
+// เดสก์ท็อป: เปิดหน้า LINE ใน popup เพื่อไม่ให้ข้อมูลที่กรอกในฟอร์มสั่งของหายระหว่างล็อกอิน
+// มือถือ: ต้อง redirect เต็มหน้าแทน popup เพราะ LINE บนมือถือมักดีดไปเปิดแอป LINE จริง
+// (deep link) แล้วพากลับมาด้วยการ navigate ปกติ ไม่ใช่ผ่านหน้าต่าง popup ที่ JS ควบคุมได้
 const LINE_CHANNEL_ID = process.env.EXPO_PUBLIC_LINE_CHANNEL_ID || '';
 const STATE_KEY = 'kkl_line_login_state';
+const RESUME_KEY = 'kkl_line_resume_booking';
+
+function isMobileBrowser() {
+  return /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent || '');
+}
 
 function getRedirectUri() {
   return `${window.location.origin}/`;
 }
 
+function buildAuthUrl(state) {
+  return (
+    `https://access.line.me/oauth2/v2.1/authorize` +
+    `?response_type=code&client_id=${encodeURIComponent(LINE_CHANNEL_ID)}` +
+    `&redirect_uri=${encodeURIComponent(getRedirectUri())}` +
+    `&state=${encodeURIComponent(state)}` +
+    `&scope=${encodeURIComponent('profile openid')}`
+  );
+}
+
+async function exchangeCode(code, redirectUri) {
+  const res = await fetch(`${API_BASE_URL}/api/auth/line/exchange`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, redirectUri }),
+  });
+  if (!res.ok) throw new Error('EXCHANGE_FAILED');
+  const data = await res.json();
+  await signInWithCustomToken(auth, data.customToken);
+  return { name: data.name || '', picture: data.picture || null };
+}
+
 export function isLineVerified() {
   return !!auth.currentUser?.uid?.startsWith('line:');
+}
+
+// เรียกตอนหน้าจอโหลด — เช็คว่าเพิ่งกลับมาจากการ redirect ไปล็อกอิน LINE บนมือถือหรือเปล่า
+// คืนค่า null ถ้าไม่ได้เพิ่งกลับมาจาก redirect (กรณีปกติ)
+export async function consumeLineRedirectResult() {
+  if (Platform.OS !== 'web') return null;
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get('code');
+  const returnedState = url.searchParams.get('state');
+  if (!code || !returnedState) return null;
+
+  // เคลียร์ query string ออกจาก URL ทันทีไม่ว่าผลจะเป็นยังไง กันคนกด refresh แล้วยิงซ้ำ
+  window.history.replaceState({}, '', window.location.pathname);
+
+  const savedState = window.sessionStorage.getItem(STATE_KEY);
+  const shouldResume = window.sessionStorage.getItem(RESUME_KEY) === '1';
+  window.sessionStorage.removeItem(STATE_KEY);
+  window.sessionStorage.removeItem(RESUME_KEY);
+
+  if (returnedState !== savedState) throw new Error('STATE_MISMATCH');
+
+  const profile = await exchangeCode(code, getRedirectUri());
+  return { ...profile, shouldResume };
 }
 
 export function loginWithLine() {
@@ -30,14 +83,16 @@ export function loginWithLine() {
 
     const state = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     window.sessionStorage.setItem(STATE_KEY, state);
-    const redirectUri = getRedirectUri();
-    const authUrl =
-      `https://access.line.me/oauth2/v2.1/authorize` +
-      `?response_type=code&client_id=${encodeURIComponent(LINE_CHANNEL_ID)}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&state=${encodeURIComponent(state)}` +
-      `&scope=${encodeURIComponent('profile openid')}`;
+    const authUrl = buildAuthUrl(state);
 
+    if (isMobileBrowser()) {
+      // มือถือ: redirect เต็มหน้าไปเลย ไม่ใช้ popup — หน้านี้จะ navigate ออกไป
+      window.sessionStorage.setItem(RESUME_KEY, '1');
+      window.location.href = authUrl;
+      return; // promise ค้างไว้เฉยๆ เพราะหน้าเว็บกำลังจะออกจากหน้านี้อยู่แล้ว
+    }
+
+    const redirectUri = getRedirectUri();
     const popup = window.open(authUrl, 'line_login', 'width=420,height=640');
     if (!popup) {
       reject(new Error('POPUP_BLOCKED'));
@@ -74,15 +129,8 @@ export function loginWithLine() {
         }
 
         try {
-          const res = await fetch(`${API_BASE_URL}/api/auth/line/exchange`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, redirectUri }),
-          });
-          if (!res.ok) throw new Error('EXCHANGE_FAILED');
-          const data = await res.json();
-          await signInWithCustomToken(auth, data.customToken);
-          resolve({ name: data.name || '', picture: data.picture || null });
+          const profile = await exchangeCode(code, redirectUri);
+          resolve(profile);
         } catch (e) {
           reject(e);
         }
