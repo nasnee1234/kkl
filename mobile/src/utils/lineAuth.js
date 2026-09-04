@@ -28,12 +28,16 @@ function getRedirectUri() {
 }
 
 function buildAuthUrl(state, { disableAutoLogin } = {}) {
+  // nonce: บาง build ของแอป LINE เข้มงวดกับ request ที่ขอ scope openid โดยไม่มี nonce มากกว่าฝั่งเว็บ
+  // เราไม่ได้ใช้ตรวจ replay attack เพิ่มจริงจัง แค่ใส่ไว้กันเคส auto-login ค้าง/พังที่ไม่ทราบสาเหตุ
+  const nonce = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return (
     `https://access.line.me/oauth2/v2.1/authorize` +
     (disableAutoLogin ? `?disable_auto_login=true&` : `?`) +
     `response_type=code&client_id=${encodeURIComponent(LINE_CHANNEL_ID)}` +
     `&redirect_uri=${encodeURIComponent(getRedirectUri())}` +
     `&state=${encodeURIComponent(state)}` +
+    `&nonce=${encodeURIComponent(nonce)}` +
     `&scope=${encodeURIComponent('profile openid')}`
   );
 }
