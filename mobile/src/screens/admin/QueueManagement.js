@@ -23,8 +23,10 @@ const PAYMENT_OPTIONS = [
   { key: 'promptpay', label: 'พร้อมเพย์', icon: 'qr-code-outline', note: 'สแกน QR พร้อมเพย์ที่เคาน์เตอร์' },
 ];
 
-// ถ้าเรียกคิวแล้วลูกค้าไม่มาเกิน 15 นาที ให้ยกเลิกคิวนั้นอัตโนมัติ
-const NO_SHOW_TIMEOUT_MS = 15 * 60 * 1000;
+// เรียกคิวแล้วลูกค้ายังไม่กด "กำลังไปรับแล้ว" — เรียกซ้ำอัตโนมัติทุก 5 นาที
+// ถ้าครบ 20 นาทีแล้วยังไม่มา ให้ยกเลิกคิวนั้นอัตโนมัติไปเลย
+const AUTO_RECALL_INTERVAL_MS = 5 * 60 * 1000;
+const AUTO_CANCEL_TIMEOUT_MS = 20 * 60 * 1000;
 
 export default function QueueManagement() {
   const { menuMaxWidth, gutter } = useLayout();
@@ -66,16 +68,35 @@ export default function QueueManagement() {
     return unsub;
   }, []);
 
-  // ยกเลิกคิวอัตโนมัติถ้าเรียกแล้วลูกค้าไม่มาเกิน 15 นาที
+  // เรียกซ้ำอัตโนมัติทุก 5 นาที / ยกเลิกอัตโนมัติที่ 20 นาที ถ้าเรียกคิวแล้วลูกค้ายังไม่กดยืนยัน
+  // ใช้ firstCalledAt เป็นจุดอ้างอิงเวลาคงที่ (ไม่ขยับ) แยกจาก callingAt ที่ต้องอัปเดตทุกรอบเรียกซ้ำ
+  // เพื่อให้ฝั่งลูกค้าได้ยินเสียง/สั่นใหม่ (ดู lastCallingAtRef ใน QueueContext.js)
   useEffect(() => {
-    const checkNoShows = () => {
+    const checkStaleCalls = () => {
       const now = Date.now();
       queuesRef.current
-        .filter((q) => q.status === 'calling' && q.callingAt?.toDate)
-        .filter((q) => now - q.callingAt.toDate().getTime() > NO_SHOW_TIMEOUT_MS)
-        .forEach((q) => updateDoc(doc(db, 'queues', q.id), { status: 'cancelled' }));
+        .filter((q) => q.status === 'calling' && !q.onTheWay && q.firstCalledAt?.toDate)
+        .forEach(async (q) => {
+          const elapsedMs = now - q.firstCalledAt.toDate().getTime();
+          if (elapsedMs >= AUTO_CANCEL_TIMEOUT_MS) {
+            await updateDoc(doc(db, 'queues', q.id), { status: 'cancelled', autoCancelled: true });
+            return;
+          }
+          const dueRecalls = Math.floor(elapsedMs / AUTO_RECALL_INTERVAL_MS);
+          if (dueRecalls > 0 && dueRecalls > (q.autoRecallCount || 0)) {
+            await updateDoc(doc(db, 'queues', q.id), {
+              callingAt: serverTimestamp(),
+              autoRecallCount: dueRecalls,
+              onTheWay: false,
+              onTheWayAt: null,
+              snoozedAt: null,
+            });
+            if (q.pushToken) await sendPushNotification(q.pushToken, q.number);
+            if (q.webPushSubscription) await sendWebPush(q.webPushSubscription, q.number);
+          }
+        });
     };
-    const interval = setInterval(checkNoShows, 30000);
+    const interval = setInterval(checkStaleCalls, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -183,7 +204,16 @@ export default function QueueManagement() {
       doc(db, 'queues', item.id),
       newStatus === 'calling'
         // เรียกใหม่ทุกครั้งต้องล้างคำตอบรอบก่อนด้วย ไม่งั้นคิวที่เคยกด "กำลังไปรับ" รอบที่แล้วจะข้ามขั้นตอนยืนยัน
-        ? { status: newStatus, callingAt: serverTimestamp(), onTheWay: false, onTheWayAt: null, snoozedAt: null }
+        // firstCalledAt รีเซ็ตใหม่ทุกครั้งที่แอดมินกดเรียกเอง (มือ) — ถือเป็นจุดเริ่มนับเวลาไม่มา 20 นาทีรอบใหม่
+        ? {
+            status: newStatus,
+            callingAt: serverTimestamp(),
+            firstCalledAt: serverTimestamp(),
+            autoRecallCount: 0,
+            onTheWay: false,
+            onTheWayAt: null,
+            snoozedAt: null,
+          }
         : { status: newStatus }
     );
 
@@ -324,10 +354,15 @@ export default function QueueManagement() {
             <Text style={[styles.customerReply, item.onTheWay && styles.customerReplyOk]}>
               {item.onTheWay
                 ? '✓ ลูกค้ากดกำลังไปรับแล้ว'
-                : item.snoozedAt
-                  ? '⏳ ลูกค้าขอเวลาอีก 5 นาที'
-                  : '• รอลูกค้ากดยืนยัน'}
+                : item.autoRecallCount > 0
+                  ? `🔁 เรียกซ้ำอัตโนมัติแล้ว ${item.autoRecallCount} ครั้ง`
+                  : item.snoozedAt
+                    ? '⏳ ลูกค้าขอเวลาอีก 5 นาที'
+                    : '• รอลูกค้ากดยืนยัน'}
             </Text>
+          )}
+          {item.status === 'cancelled' && item.autoCancelled && (
+            <Text style={styles.customerReply}>⏱ ยกเลิกอัตโนมัติ — ลูกค้าไม่มารับเกิน 20 นาที</Text>
           )}
         </View>
         <View style={styles.actions}>
