@@ -7,13 +7,13 @@ import { API_BASE_URL } from '../config/api';
 // และคนไทยส่วนใหญ่คุ้นเคยกับการล็อกอิน LINE อยู่แล้ว บัญชี LINE จริงพิสูจน์ตัวตนได้แน่นหนากว่าเบอร์ที่พิมพ์เอง
 //
 // เดสก์ท็อป: เปิดหน้า LINE ใน popup เพื่อไม่ให้ข้อมูลที่กรอกในฟอร์มสั่งของหายระหว่างล็อกอิน
-// มือถือ: ต้อง redirect เต็มหน้าแทน popup เพราะ LINE บนมือถือมักดีดไปเปิดแอป LINE จริง (auto login)
-// แล้วพากลับมาด้วยการ navigate ปกติ ไม่ใช่ผ่านหน้าต่าง popup ที่ JS ควบคุมได้
+// มือถือ: redirect เต็มหน้าแทน popup เพราะ LINE บนมือถือมักดีดไปเปิดแอป LINE จริง (auto login)
 //
-// มือถือลองล็อกอินผ่านแอป LINE จริงก่อนเสมอ (เนียนสุดสำหรับคนที่ล็อกอิน LINE ค้างอยู่แล้วในเครื่อง)
-// ถ้าล้มเหลว (LINE เรียกว่า "auto login failure" — สังเกตได้จาก state ที่ callback ไม่ตรงกับที่ส่งไป
-// ตามเอกสาร https://developers.line.biz/en/docs/line-login/how-to-handle-auto-login-failure/)
-// จะ redirect ซ้ำอีกครั้งด้วย disable_auto_login=true ให้ใช้หน้าเว็บล็อกอินแทนแบบเงียบๆ ไม่ต้องให้ลูกค้ากดเอง
+// ทั้งสองแพลตฟอร์มบังคับ disable_auto_login=true เสมอ — เคยลองให้มือถือ auto-login ผ่านแอป LINE
+// จริงก่อน (เนียนกว่าสำหรับคนที่ล็อกอินค้างอยู่แล้ว) แต่พบว่าแอป LINE บางเครื่อง/บาง build พังกลาง
+// ทางโดยโยน error ทั่วไปโดยไม่ redirect กลับมาเลย (ตรวจจับ/กู้คืนจากฝั่งเว็บไม่ได้ ตามที่เอกสาร LINE
+// เองก็ยอมรับว่าเป็นพฤติกรรมของ OS/แอปที่ควบคุมไม่ได้) จึงตัดสินใจใช้หน้าเว็บล็อกอินตรงๆ เสมอ
+// เพื่อความเสถียร แลกกับความเนียนที่หายไปเล็กน้อย
 const LINE_CHANNEL_ID = process.env.EXPO_PUBLIC_LINE_CHANNEL_ID || '';
 const STATE_KEY = 'kkl_line_login_state';
 const RESUME_KEY = 'kkl_line_resume_booking';
@@ -100,14 +100,6 @@ export async function consumeLineRedirectResult() {
   return { ...profile, shouldResume };
 }
 
-// ทางลัดสำรอง — ให้ลูกค้ากดเองถ้าลองกด "เข้าสู่ระบบด้วย LINE" ปกติแล้วแอป LINE ค้าง/error
-// ข้ามการดีดไปแอป LINE จริงไปเลย ใช้หน้าเว็บล็อกอินของ LINE ตรงๆ (เชื่อถือได้กว่าแต่ไม่เนียนเท่า)
-export function loginWithLineWebOnly() {
-  if (Platform.OS !== 'web' || !LINE_CHANNEL_ID) return;
-  window.sessionStorage.removeItem(RETRY_KEY);
-  redirectToLine({ disableAutoLogin: true });
-}
-
 export function loginWithLine() {
   return new Promise((resolve, reject) => {
     if (Platform.OS !== 'web') {
@@ -120,10 +112,10 @@ export function loginWithLine() {
     }
 
     if (isMobileBrowser()) {
-      // มือถือ: redirect เต็มหน้าไปเลย ไม่ใช้ popup — ลองล็อกอินผ่านแอป LINE จริงก่อน (เนียนกว่า)
+      // มือถือ: redirect เต็มหน้าไปเลย ไม่ใช้ popup
       // หน้านี้จะ navigate ออกไป promise นี้จึงค้างไว้เฉยๆ ไม่ resolve/reject
       window.sessionStorage.removeItem(RETRY_KEY);
-      redirectToLine({ disableAutoLogin: false });
+      redirectToLine({ disableAutoLogin: true });
       return;
     }
 
