@@ -22,9 +22,13 @@ function getRedirectUri() {
 }
 
 function buildAuthUrl(state) {
+  // disable_auto_login=true กัน LINE ดีดไปเปิดแอป LINE จริงบนมือถือ (ฟีเจอร์ "auto login" ของ LINE เอง)
+  // ซึ่งบางเครื่อง/บางจังหวะ auto login ล้มเหลวแล้วโยน error ทั่วไปกลับมาโดยไม่มีรายละเอียด (ตามเอกสาร LINE)
+  // เราไม่มีแอปมือถือจริงอยู่แล้ว ใช้หน้าเว็บล็อกอินของ LINE ตรงๆ เชื่อถือได้กว่า
   return (
     `https://access.line.me/oauth2/v2.1/authorize` +
-    `?response_type=code&client_id=${encodeURIComponent(LINE_CHANNEL_ID)}` +
+    `?disable_auto_login=true` +
+    `&response_type=code&client_id=${encodeURIComponent(LINE_CHANNEL_ID)}` +
     `&redirect_uri=${encodeURIComponent(getRedirectUri())}` +
     `&state=${encodeURIComponent(state)}` +
     `&scope=${encodeURIComponent('profile openid')}`
