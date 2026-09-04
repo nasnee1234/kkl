@@ -17,7 +17,7 @@ import { auth, db } from '../config/firebase';
 import { createQueueWithNumber, createScheduledQueue, formatQueueLabel, toLocalDateStr } from '../utils/queueNumbers';
 import { getTimeOptions, formatPickupDateLabel, MONTH_OPTIONS, getDayOptions, buildPickupDate } from '../utils/pickupSchedule';
 import { registerForPushNotifications } from '../utils/notifications';
-import { isLineVerified, loginWithLine, consumeLineRedirectResult, lineAuthErrorMessage } from '../utils/lineAuth';
+import { isLineVerified, loginWithLine, loginWithLineWebOnly, consumeLineRedirectResult, lineAuthErrorMessage } from '../utils/lineAuth';
 import AnimatedPressable from '../components/AnimatedPressable';
 import ProgressRing from '../components/ProgressRing';
 import Receipt from '../components/Receipt';
@@ -402,6 +402,10 @@ export default function QueueRequest() {
                     )}
                   </AnimatedPressable>
 
+                  <TouchableOpacity style={styles.lineWebFallback} onPress={loginWithLineWebOnly}>
+                    <Text style={styles.lineWebFallbackText}>เปิดแอป LINE ไม่ได้? เข้าสู่ระบบผ่านหน้าเว็บแทน</Text>
+                  </TouchableOpacity>
+
                   <TouchableOpacity style={styles.cancelBtn2} onPress={() => setBookingModalVisible(false)}>
                     <Text style={styles.cancelBtnText2}>ยกเลิก</Text>
                   </TouchableOpacity>
@@ -765,6 +769,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#06C755', borderRadius: 999, paddingVertical: 18, marginTop: 4,
   },
   lineBtnText: { fontFamily: fonts.bodyExtraBold, fontSize: 16, color: '#fff' },
+  lineWebFallback: { alignItems: 'center', marginTop: 14 },
+  lineWebFallbackText: { fontFamily: fonts.bodySemiBold, fontSize: 12.5, color: colors.textMuted, textDecorationLine: 'underline' },
   timeEmptyBox: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 20, alignItems: 'center' },
   timeEmptyText: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   bookingTotalRow: {

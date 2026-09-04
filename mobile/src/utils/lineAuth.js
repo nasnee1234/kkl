@@ -7,11 +7,17 @@ import { API_BASE_URL } from '../config/api';
 // และคนไทยส่วนใหญ่คุ้นเคยกับการล็อกอิน LINE อยู่แล้ว บัญชี LINE จริงพิสูจน์ตัวตนได้แน่นหนากว่าเบอร์ที่พิมพ์เอง
 //
 // เดสก์ท็อป: เปิดหน้า LINE ใน popup เพื่อไม่ให้ข้อมูลที่กรอกในฟอร์มสั่งของหายระหว่างล็อกอิน
-// มือถือ: ต้อง redirect เต็มหน้าแทน popup เพราะ LINE บนมือถือมักดีดไปเปิดแอป LINE จริง
-// (deep link) แล้วพากลับมาด้วยการ navigate ปกติ ไม่ใช่ผ่านหน้าต่าง popup ที่ JS ควบคุมได้
+// มือถือ: ต้อง redirect เต็มหน้าแทน popup เพราะ LINE บนมือถือมักดีดไปเปิดแอป LINE จริง (auto login)
+// แล้วพากลับมาด้วยการ navigate ปกติ ไม่ใช่ผ่านหน้าต่าง popup ที่ JS ควบคุมได้
+//
+// มือถือลองล็อกอินผ่านแอป LINE จริงก่อนเสมอ (เนียนสุดสำหรับคนที่ล็อกอิน LINE ค้างอยู่แล้วในเครื่อง)
+// ถ้าล้มเหลว (LINE เรียกว่า "auto login failure" — สังเกตได้จาก state ที่ callback ไม่ตรงกับที่ส่งไป
+// ตามเอกสาร https://developers.line.biz/en/docs/line-login/how-to-handle-auto-login-failure/)
+// จะ redirect ซ้ำอีกครั้งด้วย disable_auto_login=true ให้ใช้หน้าเว็บล็อกอินแทนแบบเงียบๆ ไม่ต้องให้ลูกค้ากดเอง
 const LINE_CHANNEL_ID = process.env.EXPO_PUBLIC_LINE_CHANNEL_ID || '';
 const STATE_KEY = 'kkl_line_login_state';
 const RESUME_KEY = 'kkl_line_resume_booking';
+const RETRY_KEY = 'kkl_line_retried';
 
 function isMobileBrowser() {
   return /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent || '');
@@ -21,18 +27,22 @@ function getRedirectUri() {
   return `${window.location.origin}/`;
 }
 
-function buildAuthUrl(state) {
-  // disable_auto_login=true กัน LINE ดีดไปเปิดแอป LINE จริงบนมือถือ (ฟีเจอร์ "auto login" ของ LINE เอง)
-  // ซึ่งบางเครื่อง/บางจังหวะ auto login ล้มเหลวแล้วโยน error ทั่วไปกลับมาโดยไม่มีรายละเอียด (ตามเอกสาร LINE)
-  // เราไม่มีแอปมือถือจริงอยู่แล้ว ใช้หน้าเว็บล็อกอินของ LINE ตรงๆ เชื่อถือได้กว่า
+function buildAuthUrl(state, { disableAutoLogin } = {}) {
   return (
     `https://access.line.me/oauth2/v2.1/authorize` +
-    `?disable_auto_login=true` +
-    `&response_type=code&client_id=${encodeURIComponent(LINE_CHANNEL_ID)}` +
+    (disableAutoLogin ? `?disable_auto_login=true&` : `?`) +
+    `response_type=code&client_id=${encodeURIComponent(LINE_CHANNEL_ID)}` +
     `&redirect_uri=${encodeURIComponent(getRedirectUri())}` +
     `&state=${encodeURIComponent(state)}` +
     `&scope=${encodeURIComponent('profile openid')}`
   );
+}
+
+function redirectToLine({ disableAutoLogin, keepResume }) {
+  const state = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  window.sessionStorage.setItem(STATE_KEY, state);
+  if (!keepResume) window.sessionStorage.setItem(RESUME_KEY, '1');
+  window.location.href = buildAuthUrl(state, { disableAutoLogin });
 }
 
 async function exchangeCode(code, redirectUri) {
@@ -52,7 +62,7 @@ export function isLineVerified() {
 }
 
 // เรียกตอนหน้าจอโหลด — เช็คว่าเพิ่งกลับมาจากการ redirect ไปล็อกอิน LINE บนมือถือหรือเปล่า
-// คืนค่า null ถ้าไม่ได้เพิ่งกลับมาจาก redirect (กรณีปกติ)
+// คืนค่า null ถ้าไม่ได้เพิ่งกลับมาจาก redirect (กรณีปกติ) หรือถ้ากำลัง retry อยู่เงียบๆ (หน้าจะ navigate ออกไปเอง)
 export async function consumeLineRedirectResult() {
   if (Platform.OS !== 'web') return null;
   const url = new URL(window.location.href);
@@ -64,14 +74,34 @@ export async function consumeLineRedirectResult() {
   window.history.replaceState({}, '', window.location.pathname);
 
   const savedState = window.sessionStorage.getItem(STATE_KEY);
-  const shouldResume = window.sessionStorage.getItem(RESUME_KEY) === '1';
-  window.sessionStorage.removeItem(STATE_KEY);
-  window.sessionStorage.removeItem(RESUME_KEY);
 
-  if (returnedState !== savedState) throw new Error('STATE_MISMATCH');
+  if (returnedState !== savedState) {
+    // auto login ล้มเหลว — ลอง fallback ด้วย disable_auto_login=true แบบเงียบๆ ครั้งเดียว
+    const alreadyRetried = window.sessionStorage.getItem(RETRY_KEY) === '1';
+    if (!alreadyRetried) {
+      window.sessionStorage.setItem(RETRY_KEY, '1');
+      redirectToLine({ disableAutoLogin: true, keepResume: true });
+      return null;
+    }
+    window.sessionStorage.removeItem(RESUME_KEY);
+    window.sessionStorage.removeItem(RETRY_KEY);
+    throw new Error('STATE_MISMATCH');
+  }
+
+  const shouldResume = window.sessionStorage.getItem(RESUME_KEY) === '1';
+  window.sessionStorage.removeItem(RESUME_KEY);
+  window.sessionStorage.removeItem(RETRY_KEY);
 
   const profile = await exchangeCode(code, getRedirectUri());
   return { ...profile, shouldResume };
+}
+
+// ทางลัดสำรอง — ให้ลูกค้ากดเองถ้าลองกด "เข้าสู่ระบบด้วย LINE" ปกติแล้วแอป LINE ค้าง/error
+// ข้ามการดีดไปแอป LINE จริงไปเลย ใช้หน้าเว็บล็อกอินของ LINE ตรงๆ (เชื่อถือได้กว่าแต่ไม่เนียนเท่า)
+export function loginWithLineWebOnly() {
+  if (Platform.OS !== 'web' || !LINE_CHANNEL_ID) return;
+  window.sessionStorage.removeItem(RETRY_KEY);
+  redirectToLine({ disableAutoLogin: true });
 }
 
 export function loginWithLine() {
@@ -85,18 +115,21 @@ export function loginWithLine() {
       return;
     }
 
-    const state = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    window.sessionStorage.setItem(STATE_KEY, state);
-    const authUrl = buildAuthUrl(state);
-
     if (isMobileBrowser()) {
-      // มือถือ: redirect เต็มหน้าไปเลย ไม่ใช้ popup — หน้านี้จะ navigate ออกไป
-      window.sessionStorage.setItem(RESUME_KEY, '1');
-      window.location.href = authUrl;
-      return; // promise ค้างไว้เฉยๆ เพราะหน้าเว็บกำลังจะออกจากหน้านี้อยู่แล้ว
+      // มือถือ: redirect เต็มหน้าไปเลย ไม่ใช้ popup — ลองล็อกอินผ่านแอป LINE จริงก่อน (เนียนกว่า)
+      // หน้านี้จะ navigate ออกไป promise นี้จึงค้างไว้เฉยๆ ไม่ resolve/reject
+      window.sessionStorage.removeItem(RETRY_KEY);
+      redirectToLine({ disableAutoLogin: false });
+      return;
     }
 
+    const state = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    window.sessionStorage.setItem(STATE_KEY, state);
     const redirectUri = getRedirectUri();
+    // เดสก์ท็อป: ใช้ disable_auto_login เสมอ เพราะ popup ปิดตัวเองอัตโนมัติแบบที่ทำอยู่ไม่รองรับ
+    // การถูกสลับไปแอปเดสก์ท็อปของ LINE (ถ้ามี) อยู่แล้ว
+    const authUrl = buildAuthUrl(state, { disableAutoLogin: true });
+
     const popup = window.open(authUrl, 'line_login', 'width=420,height=640');
     if (!popup) {
       reject(new Error('POPUP_BLOCKED'));
