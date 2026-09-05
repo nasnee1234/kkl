@@ -23,9 +23,10 @@ const PAYMENT_OPTIONS = [
   { key: 'promptpay', label: 'พร้อมเพย์', icon: 'qr-code-outline', note: 'สแกน QR พร้อมเพย์ที่เคาน์เตอร์' },
 ];
 
-// TEMP TEST VALUES — ย่อจาก 5 นาที/20 นาที เหลือ 30 วิ/2 นาที ไว้เทสสดชั่วคราว อย่าลืมเปลี่ยนกลับ!
-const AUTO_RECALL_INTERVAL_MS = 30 * 1000;
-const AUTO_CANCEL_TIMEOUT_MS = 2 * 60 * 1000;
+// เรียกคิวแล้วลูกค้ายังไม่กด "กำลังไปรับแล้ว" — เรียกซ้ำอัตโนมัติทุก 5 นาที
+// ถ้าครบ 20 นาทีแล้วยังไม่มา ให้ยกเลิกคิวนั้นอัตโนมัติไปเลย
+const AUTO_RECALL_INTERVAL_MS = 5 * 60 * 1000;
+const AUTO_CANCEL_TIMEOUT_MS = 20 * 60 * 1000;
 
 export default function QueueManagement() {
   const { menuMaxWidth, gutter } = useLayout();
@@ -110,7 +111,7 @@ export default function QueueManagement() {
           }
         });
     };
-    const interval = setInterval(checkStaleCalls, 5000); // TEMP TEST: ปกติ 15000
+    const interval = setInterval(checkStaleCalls, 15000);
     return () => clearInterval(interval);
   }, []);
 
