@@ -40,14 +40,7 @@ export default function Notifications() {
   return (
     <PatternBackground>
       <View style={[styles.headerWrap, { maxWidth: stackMaxWidth, paddingHorizontal: gutter }]}>
-        <ScreenHeader
-          title="แจ้งเตือน"
-          right={
-            <TouchableOpacity onPress={markNotificationsRead}>
-              <Text style={styles.readAll}>อ่านทั้งหมด</Text>
-            </TouchableOpacity>
-          }
-        />
+        <ScreenHeader title="แจ้งเตือน" />
       </View>
 
       <FlatList
@@ -117,7 +110,6 @@ export default function Notifications() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
   headerWrap: { paddingTop: 52, width: '100%', alignSelf: 'center' },
-  readAll: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.primaryDeep },
   list: { paddingBottom: 118, flexGrow: 1, width: '100%', alignSelf: 'center' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 80, gap: 10 },
   emptyText: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 14 },

@@ -153,6 +153,12 @@ export function QueueProvider({ children }) {
           pushNotification(`📋 ถึงวันนัดแล้ว! คิวของคุณคือหมายเลข ${data.number}`);
         }
 
+        // สถานะไม่ใช่ "กำลังเรียก" แล้ว (เช่นถูกยกเลิกอัตโนมัติ/แอดมินยกเลิก/เสร็จแล้ว) — ต้องปิดหน้าจอ
+        // เรียกคิวเต็มจอทิ้งเสมอ ไม่งั้นค้างโชว์ "ถึงคิวคุณแล้ว!" ต่อไปทั้งที่คิวไม่มีผลแล้วจริงๆ
+        if (newStatus !== 'calling') {
+          setCallAlert(false);
+        }
+
         prevStatusRef.current = newStatus;
       },
       (error) => console.error('QueueContext:', error.message)
@@ -258,7 +264,8 @@ export function QueueProvider({ children }) {
       pct,
       deg: Math.round(pct * 3.6),
       etaMinutes,
-      etaLabel: aheadCount === 0 ? 'ถึงคิวคุณแล้ว' : `อีก ${etaMinutes} นาที`,
+      // ใช้จำนวนคิวที่นับได้จริงแทนนาทีประมาณการ — เวลาเสิร์ฟจริงไม่แน่นอน บอกนาทีผิดบ่อยจนลูกค้าไม่เชื่อ
+      etaLabel: aheadCount === 0 ? 'ถึงคิวคุณแล้ว' : `อีก ${aheadCount} คิว`,
     };
   }
 

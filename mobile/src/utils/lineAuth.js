@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { signInWithCustomToken } from 'firebase/auth';
+import { signInWithCustomToken, signOut } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { API_BASE_URL } from '../config/api';
 
@@ -63,6 +63,13 @@ async function exchangeCode(code, redirectUri) {
 
 export function isLineVerified() {
   return !!auth.currentUser?.uid?.startsWith('line:');
+}
+
+// ให้ลูกค้ากดออกจากระบบ LINE เอง เผื่อใช้เครื่องร่วมกันหลายคน (ครอบครัว/เครื่องสาธารณะ)
+// เช็คก่อนว่าเป็นเซสชัน LINE จริงเท่านั้น กันพลาดไปเรียก signOut ทับเซสชันอื่นโดยไม่ตั้งใจ
+export function logoutFromLine() {
+  if (!isLineVerified()) return Promise.resolve();
+  return signOut(auth);
 }
 
 // เรียกตอนหน้าจอโหลด — เช็คว่าเพิ่งกลับมาจากการ redirect ไปล็อกอิน LINE บนมือถือหรือเปล่า

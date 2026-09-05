@@ -70,6 +70,7 @@ export default function IncomingCallOverlay({ visible, queueNumber, onDismiss, o
             <Text style={styles.snoozeText}>ขออีก 5 นาที</Text>
           </AnimatedPressable>
         )}
+        <Text style={styles.noShowNote}>ถ้าไม่มารับภายใน 20 นาที ระบบจะยกเลิกคิวให้อัตโนมัติ</Text>
       </View>
     </Modal>
   );
@@ -94,4 +95,8 @@ const styles = StyleSheet.create({
   ackText: { fontFamily: fonts.heading, color: colors.primaryDeep, fontSize: 18 },
   snoozeBtn: { marginTop: 14, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 999 },
   snoozeText: { fontFamily: fonts.bodyBold, color: colors.cream, fontSize: 14 },
+  noShowNote: {
+    marginTop: 18, fontFamily: fonts.body, color: colors.cream, opacity: 0.75,
+    fontSize: 12.5, textAlign: 'center', maxWidth: 260,
+  },
 });

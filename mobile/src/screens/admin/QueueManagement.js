@@ -6,7 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc,
-  doc, serverTimestamp, query, orderBy, where, writeBatch,
+  doc, serverTimestamp, query, orderBy, where, writeBatch, Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { createQueueWithNumber, MAX_QUEUE_PER_DAY } from '../../utils/queueNumbers';
@@ -23,10 +23,9 @@ const PAYMENT_OPTIONS = [
   { key: 'promptpay', label: 'พร้อมเพย์', icon: 'qr-code-outline', note: 'สแกน QR พร้อมเพย์ที่เคาน์เตอร์' },
 ];
 
-// เรียกคิวแล้วลูกค้ายังไม่กด "กำลังไปรับแล้ว" — เรียกซ้ำอัตโนมัติทุก 5 นาที
-// ถ้าครบ 20 นาทีแล้วยังไม่มา ให้ยกเลิกคิวนั้นอัตโนมัติไปเลย
-const AUTO_RECALL_INTERVAL_MS = 5 * 60 * 1000;
-const AUTO_CANCEL_TIMEOUT_MS = 20 * 60 * 1000;
+// TEMP TEST VALUES — ย่อจาก 5 นาที/20 นาที เหลือ 30 วิ/2 นาที ไว้เทสสดชั่วคราว อย่าลืมเปลี่ยนกลับ!
+const AUTO_RECALL_INTERVAL_MS = 30 * 1000;
+const AUTO_CANCEL_TIMEOUT_MS = 2 * 60 * 1000;
 
 export default function QueueManagement() {
   const { menuMaxWidth, gutter } = useLayout();
@@ -44,6 +43,7 @@ export default function QueueManagement() {
   const [togglingAccept, setTogglingAccept] = useState(false);
   const [resetConfirmVisible, setResetConfirmVisible] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [cancelQueueTarget, setCancelQueueTarget] = useState(null);
   const [scheduledQueues, setScheduledQueues] = useState([]);
   const [scheduledExpanded, setScheduledExpanded] = useState(true);
   const [cancelScheduledTarget, setCancelScheduledTarget] = useState(null);
@@ -69,22 +69,36 @@ export default function QueueManagement() {
   }, []);
 
   // เรียกซ้ำอัตโนมัติทุก 5 นาที / ยกเลิกอัตโนมัติที่ 20 นาที ถ้าเรียกคิวแล้วลูกค้ายังไม่กดยืนยัน
-  // ใช้ firstCalledAt เป็นจุดอ้างอิงเวลาคงที่ (ไม่ขยับ) แยกจาก callingAt ที่ต้องอัปเดตทุกรอบเรียกซ้ำ
-  // เพื่อให้ฝั่งลูกค้าได้ยินเสียง/สั่นใหม่ (ดู lastCallingAtRef ใน QueueContext.js)
+  // ใช้ firstCalledAt เป็นจุดอ้างอิงเวลา แยกจาก callingAt ที่ต้องอัปเดตทุกรอบเรียกซ้ำเพื่อให้ฝั่งลูกค้า
+  // ได้ยินเสียง/สั่นใหม่ (ดู lastCallingAtRef ใน QueueContext.js) — ลูกค้ากด "ขออีก 5 นาที" ยืด
+  // firstCalledAt ออกไปจริงอีกหนึ่งรอบเรียกซ้ำ (เลื่อนทั้งกำหนดเรียกซ้ำครั้งถัดไปและกำหนดยกเลิกออกไปด้วย)
   useEffect(() => {
     const checkStaleCalls = () => {
       const now = Date.now();
       queuesRef.current
         .filter((q) => q.status === 'calling' && !q.onTheWay && q.firstCalledAt?.toDate)
         .forEach(async (q) => {
+          const ref = doc(db, 'queues', q.id);
+
+          const snoozedMs = q.snoozedAt?.toDate ? q.snoozedAt.toDate().getTime() : null;
+          const handledMs = q.lastSnoozeHandledAt?.toDate ? q.lastSnoozeHandledAt.toDate().getTime() : null;
+          if (snoozedMs && snoozedMs !== handledMs) {
+            const extended = q.firstCalledAt.toDate().getTime() + AUTO_RECALL_INTERVAL_MS;
+            await updateDoc(ref, {
+              firstCalledAt: Timestamp.fromMillis(extended),
+              lastSnoozeHandledAt: Timestamp.fromMillis(snoozedMs),
+            });
+            return; // ยืดเวลาไปแล้ว รอบหน้าค่อยเช็คเรียกซ้ำ/ยกเลิกต่อด้วยเวลาที่ยืดแล้ว
+          }
+
           const elapsedMs = now - q.firstCalledAt.toDate().getTime();
           if (elapsedMs >= AUTO_CANCEL_TIMEOUT_MS) {
-            await updateDoc(doc(db, 'queues', q.id), { status: 'cancelled', autoCancelled: true });
+            await updateDoc(ref, { status: 'cancelled', autoCancelled: true });
             return;
           }
           const dueRecalls = Math.floor(elapsedMs / AUTO_RECALL_INTERVAL_MS);
           if (dueRecalls > 0 && dueRecalls > (q.autoRecallCount || 0)) {
-            await updateDoc(doc(db, 'queues', q.id), {
+            await updateDoc(ref, {
               callingAt: serverTimestamp(),
               autoRecallCount: dueRecalls,
               onTheWay: false,
@@ -96,7 +110,7 @@ export default function QueueManagement() {
           }
         });
     };
-    const interval = setInterval(checkStaleCalls, 15000);
+    const interval = setInterval(checkStaleCalls, 5000); // TEMP TEST: ปกติ 15000
     return () => clearInterval(interval);
   }, []);
 
@@ -213,6 +227,7 @@ export default function QueueManagement() {
             onTheWay: false,
             onTheWayAt: null,
             snoozedAt: null,
+            lastSnoozeHandledAt: null,
           }
         : { status: newStatus }
     );
@@ -274,6 +289,13 @@ export default function QueueManagement() {
   };
 
   const handleDelete = (item) => setDeleteTarget(item);
+
+  const performCancelQueue = async () => {
+    if (!cancelQueueTarget) return;
+    const target = cancelQueueTarget;
+    setCancelQueueTarget(null);
+    await handleChangeStatus(target, 'cancelled');
+  };
 
   const performDelete = async () => {
     if (!deleteTarget) return;
@@ -386,7 +408,7 @@ export default function QueueManagement() {
           )}
           {(item.status === 'waiting' || item.status === 'calling') && (
             <TouchableOpacity style={[styles.actionBtn, { backgroundColor: ADMIN_STATUS_THEME.cancelled.bg }]}
-              onPress={() => handleChangeStatus(item, 'cancelled')}>
+              onPress={() => setCancelQueueTarget(item)}>
               <Ionicons name="close-outline" size={16} color={ADMIN_STATUS_THEME.cancelled.color} />
             </TouchableOpacity>
           )}
@@ -670,6 +692,17 @@ export default function QueueManagement() {
         confirmLabel="ลบ"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={performDelete}
+      />
+
+      {/* Cancel Queue Confirm */}
+      <ConfirmDialog
+        visible={!!cancelQueueTarget}
+        icon="close-circle-outline"
+        title="ยกเลิกคิว"
+        message={cancelQueueTarget ? `ต้องการยกเลิกคิว #${cancelQueueTarget.number} ของ "${cancelQueueTarget.customerName}" หรือไม่?` : ''}
+        confirmLabel="ยกเลิกคิว"
+        onCancel={() => setCancelQueueTarget(null)}
+        onConfirm={performCancelQueue}
       />
 
       {/* Cancel Scheduled Booking Confirm */}

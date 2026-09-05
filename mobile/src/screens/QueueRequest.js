@@ -23,6 +23,7 @@ import ProgressRing from '../components/ProgressRing';
 import Receipt from '../components/Receipt';
 import IncomingCallOverlay from '../components/IncomingCallOverlay';
 import ClosedPopup from '../components/ClosedPopup';
+import ConfirmDialog from '../components/ConfirmDialog';
 import Toast, { useToast } from '../components/Toast';
 import SelectField from '../components/SelectField';
 import ScreenHeader from '../components/ScreenHeader';
@@ -58,6 +59,8 @@ export default function QueueRequest() {
   const [pickupTime, setPickupTime] = useState('');
   const [bookingSaving, setBookingSaving] = useState(false);
   const [customerNameInput, setCustomerNameInput] = useState('');
+  const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
+  const [cancelScheduledTarget, setCancelScheduledTarget] = useState(null);
 
   // ยืนยันตัวตนด้วย LINE Login ก่อนสั่งล่วงหน้า — ยืนยันครั้งเดียวต่อเครื่อง ใช้ได้ทุกออเดอร์ถัดไป
   const [bookingStep, setBookingStep] = useState('verify'); // 'verify' | 'order'
@@ -239,6 +242,7 @@ export default function QueueRequest() {
   };
 
   const handleCancel = async () => {
+    setCancelConfirmVisible(false);
     if (!myQueue?.id) return;
     try {
       await updateDoc(doc(db, 'queues', myQueue.id), { status: 'cancelled' });
@@ -272,6 +276,7 @@ export default function QueueRequest() {
   };
 
   const handleCancelScheduled = async (id) => {
+    setCancelScheduledTarget(null);
     try {
       await updateDoc(doc(db, 'queues', id), { status: 'cancelled' });
     } catch (e) {
@@ -355,7 +360,7 @@ export default function QueueRequest() {
                         <Text style={styles.orderLineRight}>฿{i.price * i.qty}</Text>
                       </View>
                     ))}
-                    <TouchableOpacity style={styles.scheduledCancelBtn} onPress={() => handleCancelScheduled(sq.id)}>
+                    <TouchableOpacity style={styles.scheduledCancelBtn} onPress={() => setCancelScheduledTarget(sq)}>
                       <Text style={styles.scheduledCancelText}>ยกเลิกออเดอร์นี้</Text>
                     </TouchableOpacity>
                   </View>
@@ -372,6 +377,19 @@ export default function QueueRequest() {
           icon="alert-circle-outline"
           title="คิวเต็มแล้ว"
           message={queueFullMessage || ''}
+        />
+        <ConfirmDialog
+          visible={!!cancelScheduledTarget}
+          icon="close-circle-outline"
+          title="ยกเลิกออเดอร์นี้?"
+          message={
+            cancelScheduledTarget
+              ? `ออเดอร์วันที่ ${formatPickupDateLabel(cancelScheduledTarget.pickupDate)} เวลา ${cancelScheduledTarget.pickupTime} น. จะถูกยกเลิก`
+              : ''
+          }
+          confirmLabel="ยกเลิกออเดอร์"
+          onCancel={() => setCancelScheduledTarget(null)}
+          onConfirm={() => handleCancelScheduled(cancelScheduledTarget.id)}
         />
 
         <Modal visible={bookingModalVisible} transparent animationType="slide">
@@ -538,9 +556,9 @@ export default function QueueRequest() {
                 fillColor={colors.primaryGlow}
               >
                 <Text style={styles.ringMinutes}>
-                  {queueProgress.aheadCount == null ? '…' : queueProgress.aheadCount === 0 ? 'ถึงคิว' : `${queueProgress.etaMinutes} น.`}
+                  {queueProgress.aheadCount == null ? '…' : queueProgress.aheadCount === 0 ? 'ถึงคิว' : queueProgress.aheadCount}
                 </Text>
-                <Text style={styles.ringSub}>โดยประมาณ</Text>
+                {queueProgress.aheadCount > 0 && <Text style={styles.ringSub}>คิวก่อนหน้า</Text>}
               </ProgressRing>
             </View>
             <View style={styles.ticketDivider} />
@@ -583,7 +601,7 @@ export default function QueueRequest() {
               <Text style={styles.reminderTextSm}>เปิดเสียงเรียกไว้แล้ว — โทรศัพท์จะดังและสั่นตอนถึงคิวคุณ แม้ปิดหน้าจอ</Text>
             </View>
 
-            <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setCancelConfirmVisible(true)} activeOpacity={0.8}>
               <Text style={styles.cancelBtnText}>ยกเลิกคิวนี้</Text>
             </TouchableOpacity>
           </FadeInView>
@@ -595,6 +613,15 @@ export default function QueueRequest() {
           queueNumber={myQueue.number}
           onDismiss={handleOnTheWay}
           onSnooze={handleSnooze}
+        />
+        <ConfirmDialog
+          visible={cancelConfirmVisible}
+          icon="close-circle-outline"
+          title="ยกเลิกคิวนี้?"
+          message={`คิวหมายเลข ${formatQueueLabel(myQueue.number)} จะถูกยกเลิก มาใหม่ได้ตลอดจ๊ะ`}
+          confirmLabel="ยกเลิกคิว"
+          onCancel={() => setCancelConfirmVisible(false)}
+          onConfirm={handleCancel}
         />
       </PatternBackground>
     );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useQueue } from '../contexts/QueueContext';
+import { auth } from '../config/firebase';
+import { isLineVerified, logoutFromLine } from '../utils/lineAuth';
 import ScreenHeader from '../components/ScreenHeader';
 import PatternBackground from '../components/PatternBackground';
 import FadeInView from '../components/FadeInView';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { colors, shadows } from '../theme/colors';
 import { MODAL_MAX_WIDTH, useLayout } from '../theme/layout';
 import { fonts } from '../theme/fonts';
@@ -26,6 +30,15 @@ export default function MyProfile() {
   const { soundEnabled, vibrateEnabled, preAlertEnabled, toggleSound, toggleVibrate, togglePreAlert } = useQueue();
   const { stackMaxWidth, gutter } = useLayout();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [lineLoggedIn, setLineLoggedIn] = useState(isLineVerified());
+  const [lineLogoutConfirmVisible, setLineLogoutConfirmVisible] = useState(false);
+
+  // เช็คแบบ reactive เพราะ isLineVerified() เฉยๆ เป็นแค่ snapshot ตอนเรนเดอร์ครั้งแรก
+  // ไม่รู้ตอนล็อกอิน/ออกจากระบบเกิดขึ้นทีหลัง (เช่นเพิ่งล็อกอิน LINE เสร็จตอนสั่งของ)
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, () => setLineLoggedIn(isLineVerified()));
+    return unsub;
+  }, []);
 
   const toggles = [
     { key: 'sound', icon: 'volume-high-outline', name: 'เสียงเรียกคิว', desc: 'ดังเป็นเสียงระฆังตอนถึงคิวคุณ', value: soundEnabled, onToggle: toggleSound },
@@ -77,6 +90,20 @@ export default function MyProfile() {
           </TouchableOpacity>
         ))}
 
+        {lineLoggedIn && (
+          <TouchableOpacity
+            style={[styles.navRow, styles.rowBorder]}
+            activeOpacity={0.7}
+            onPress={() => setLineLogoutConfirmVisible(true)}
+          >
+            <View style={styles.rowIconNeutral}>
+              <Ionicons name="log-out-outline" size={19} color={colors.textDark} />
+            </View>
+            <Text style={styles.navRowLabel}>ออกจากระบบ LINE</Text>
+            <Ionicons name="chevron-forward-outline" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity style={styles.navRow} onPress={() => navigation.navigate('AdminLogin')} activeOpacity={0.7}>
           <View style={styles.rowIconNeutral}>
             <Ionicons name="shield-checkmark-outline" size={19} color={colors.textDark} />
@@ -116,6 +143,19 @@ export default function MyProfile() {
           </View>
         </View>
       </Modal>
+
+      <ConfirmDialog
+        visible={lineLogoutConfirmVisible}
+        icon="log-out-outline"
+        title="ออกจากระบบ LINE?"
+        message="ครั้งต่อไปที่สั่งออเดอร์ล่วงหน้าจะต้องเข้าสู่ระบบด้วย LINE ใหม่อีกครั้ง"
+        confirmLabel="ออกจากระบบ"
+        onCancel={() => setLineLogoutConfirmVisible(false)}
+        onConfirm={() => {
+          setLineLogoutConfirmVisible(false);
+          logoutFromLine();
+        }}
+      />
       </ScrollView>
     </PatternBackground>
   );
