@@ -73,7 +73,7 @@ export default function Home() {
         <FadeInView delay={0}>
           <View style={styles.topRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.eyebrow}>ร้านไก่กอและกะเมาะห์</Text>
+              <Text style={styles.eyebrow}>ร้านไก่ฆอและกะเมาะห์</Text>
               <Text style={styles.title}>หิวยังจ๊ะ วันนี้กินอะไร</Text>
             </View>
           </View>
@@ -120,7 +120,7 @@ export default function Home() {
             onPress={() => navigation.navigate('เมนู')}
           >
             <Ionicons name="search-outline" size={18} color={colors.textDark} />
-            <Text style={styles.searchPlaceholder}>อยากกินไก่กอและไม้ไหน ค้นเลย</Text>
+            <Text style={styles.searchPlaceholder}>อยากกินไก่ฆอและไม้ไหน ค้นเลย</Text>
           </TouchableOpacity>
         </FadeInView>
 
@@ -159,7 +159,7 @@ export default function Home() {
             <Text style={styles.shopInfoImageLabel}>แผนที่{'\n'}ร้าน</Text>
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.shopInfoName}>กะเมาะห์ ไก่กอและ</Text>
+            <Text style={styles.shopInfoName}>กะเมาะห์ ไก่ฆอและ</Text>
             <Text style={styles.shopInfoDetail}>ตลาดเย็นถนนสายกลาง · เดินจากป้ายรถ 2 นาที</Text>
             <View style={styles.shopInfoRow}>
               <View style={styles.shopInfoItem}>

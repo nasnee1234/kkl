@@ -194,7 +194,7 @@ export default function MenuManagement() {
             <Text style={styles.modalTitle}>{editTarget ? 'แก้ไขเมนู' : 'เพิ่มเมนูใหม่'}</Text>
 
             {[
-              { label: 'ชื่อเมนู *', key: 'name', placeholder: 'เช่น ไก่กอและ' },
+              { label: 'ชื่อเมนู *', key: 'name', placeholder: 'เช่น ไก่ฆอและ' },
               { label: 'ราคา (บาท) *', key: 'price', placeholder: '0', keyboardType: 'numeric' },
             ].map((field) => (
               <View key={field.key} style={styles.fieldBox}>
