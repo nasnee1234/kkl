@@ -18,8 +18,8 @@ export const MENU_IMAGE_MAP = {
   'ปีก': require('./images/menu/ปีก.jpg'),
   'หนัง': require('./images/menu/หนัง.jpg'),
   'หอย': require('./images/menu/หอย.jpg'),
-  'อก': require('./images/menu/อก.jpg'),
-  'อกเล็ก': require('./images/menu/อกเล็ก.jpg'),
+  'อกใหญ่': require('./images/menu/อกใหญ่.jpg'),
+  'อกกล็ก': require('./images/menu/อกกล็ก.jpg'),
   'เนื้อล้วน': require('./images/menu/เนื้อล้วน.jpg'),
   'ใส้': require('./images/menu/ใส้.jpg'),
 };
