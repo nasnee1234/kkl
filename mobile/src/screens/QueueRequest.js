@@ -59,6 +59,7 @@ export default function QueueRequest() {
   const [pickupTime, setPickupTime] = useState('');
   const [bookingSaving, setBookingSaving] = useState(false);
   const [customerNameInput, setCustomerNameInput] = useState('');
+  const [customerPhoneInput, setCustomerPhoneInput] = useState('');
   const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
   const [cancelScheduledTarget, setCancelScheduledTarget] = useState(null);
 
@@ -158,6 +159,7 @@ export default function QueueRequest() {
     setPickupTime(getTimeOptions(firstDate)[0]?.value || '');
     setLineError('');
     setCustomerNameInput('');
+    setCustomerPhoneInput('');
     setBookingStep(isLineVerified() ? 'order' : 'verify');
     setBookingModalVisible(true);
   };
@@ -178,7 +180,9 @@ export default function QueueRequest() {
 
   const handleBookingConfirm = async () => {
     const customerName = customerNameInput.trim();
-    if (bookingSaving || selectedItems.length === 0 || !pickupTime || !customerName) return;
+    const customerPhone = customerPhoneInput.trim();
+    const isValidPhone = /^0\d{8,9}$/.test(customerPhone);
+    if (bookingSaving || selectedItems.length === 0 || !pickupTime || !customerName || !isValidPhone) return;
     const lineUid = auth.currentUser?.uid;
     if (!lineUid || !isLineVerified()) {
       setBookingStep('verify');
@@ -192,7 +196,7 @@ export default function QueueRequest() {
         items: selectedItems,
         pickupDate,
         pickupTime,
-        phone: null,
+        phone: customerPhone,
         lineUid,
         pushToken: pushToken || null,
         webPushSubscription: webPushSubscription || null,
@@ -437,6 +441,17 @@ export default function QueueRequest() {
                     onChangeText={setCustomerNameInput}
                   />
 
+                  <Text style={styles.sectionLabel}>เบอร์โทร</Text>
+                  <TextInput
+                    style={styles.otpInput}
+                    placeholder="เบอร์ที่ติดต่อได้ เผื่อร้านต้องโทรเช็ค"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={10}
+                    value={customerPhoneInput}
+                    onChangeText={(v) => setCustomerPhoneInput(v.replace(/\D/g, ''))}
+                  />
+
                   <View style={styles.bookingList}>
                     {menus.length === 0 ? (
                       <Text style={styles.bookingEmpty}>ยังไม่มีเมนู</Text>
@@ -494,10 +509,10 @@ export default function QueueRequest() {
                   <AnimatedPressable
                     style={[
                       styles.saveBtn,
-                      (bookingSaving || selectedItems.length === 0 || !pickupTime || !customerNameInput.trim()) && { opacity: 0.6 },
+                      (bookingSaving || selectedItems.length === 0 || !pickupTime || !customerNameInput.trim() || !/^0\d{8,9}$/.test(customerPhoneInput.trim())) && { opacity: 0.6 },
                     ]}
                     onPress={handleBookingConfirm}
-                    disabled={bookingSaving || selectedItems.length === 0 || !pickupTime || !customerNameInput.trim()}
+                    disabled={bookingSaving || selectedItems.length === 0 || !pickupTime || !customerNameInput.trim() || !/^0\d{8,9}$/.test(customerPhoneInput.trim())}
                   >
                     {bookingSaving ? (
                       <ActivityIndicator color="#fff" />
@@ -505,6 +520,8 @@ export default function QueueRequest() {
                       <Text style={styles.saveBtnText}>
                         {!customerNameInput.trim()
                           ? 'กรอกชื่อผู้สั่ง'
+                          : !/^0\d{8,9}$/.test(customerPhoneInput.trim())
+                          ? 'กรอกเบอร์โทรให้ครบ'
                           : selectedItems.length === 0
                           ? 'เลือกอย่างน้อย 1 เมนู'
                           : 'ยืนยันสั่งออเดอร์'}

@@ -502,6 +502,7 @@ export default function QueueManagement() {
                         )}
                       </View>
                       <Text style={styles.scheduledName}>{item.customerName}</Text>
+                      {item.phone ? <Text style={styles.scheduledPhone}>โทร {item.phone}</Text> : null}
                       {item.items?.length > 0 && (
                         <Text style={styles.scheduledItems} numberOfLines={2}>
                           {item.items.map((i) => `${i.name} x${i.qty}`).join(', ')}
@@ -770,6 +771,7 @@ const styles = StyleSheet.create({
   readyBadge: { backgroundColor: ADMIN_STATUS_THEME.done.bg, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 },
   readyBadgeText: { color: ADMIN_STATUS_THEME.done.color, fontSize: 10.5, fontWeight: '800' },
   scheduledName: { color: adminTheme.text, fontSize: 14, fontWeight: '600', marginTop: 2 },
+  scheduledPhone: { color: adminTheme.textMuted, fontSize: 12, marginTop: 2 },
   scheduledItems: { color: adminTheme.textMuted, fontSize: 12, marginTop: 3, lineHeight: 16 },
   scheduledActions: { flexDirection: 'row', gap: 6 },
   scrollFlex: { flex: 1 },
