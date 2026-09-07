@@ -7,7 +7,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email == 'admin@gmail.com';
+        && request.auth.token.email in ['admin@gmail.com', 'yameelah@gmail.com'];
     }
 
     // ฟิลด์ที่ต้องมาจากแอดมินเท่านั้น (ยอดขาย/เวลาที่แอดมินกดแต่ละสถานะ) — ลูกค้าห้ามใส่ตอนสร้างเอกสารเด็ดขาด
