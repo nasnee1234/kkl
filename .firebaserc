@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "kkl1-66a9e"
-  }
+  },
+  "targets": {
+    "kkl1-66a9e": {
+      "hosting": {
+        "default": [
+          "kkl1-66a9e"
+        ],
+        "golekq": [
+          "golekq"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
